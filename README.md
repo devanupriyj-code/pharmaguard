@@ -130,5 +130,4 @@ If you find this project useful, consider giving it a ⭐ on GitHub!
 
 For educational and hackathon purposes.
 
-## 📂 Project Structure
 
