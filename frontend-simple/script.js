@@ -15,15 +15,31 @@ const medInput = document.getElementById('medInput');
 const addBtn = document.getElementById('addMedBtn');
 const medTagsContainer = document.getElementById('medTagsContainer');
 
-const analyzeBtn = document.getElementById('analyzeBtn');
+const analyzeBtn = document.getElementById('analyzeReportBtn');
+const analyzeMedBtn = document.getElementById('analyzeMedBtn');
+
 const resultPanel = document.getElementById('resultPanel');
 
 const medCountSpan = document.getElementById('medCount');
 const interactionRiskSpan = document.getElementById('interactionRisk');
 const reportStatusSpan = document.getElementById('reportStatus');
 const fileSizeSpan = document.getElementById('fileSize');
-document.getElementById("analyzeReportBtn").addEventListener("click", analyze);
-document.getElementById("analyzeMedBtn").addEventListener("click", analyzeMedicines);
+// ===============================
+// ❌ REMOVE MEDICINE (FIXED)
+// ===============================
+medTagsContainer.addEventListener('click', (e) => {
+  const btn = e.target.closest('.remove-med');
+  if (!btn) return;
+
+  const idx = parseInt(btn.getAttribute('data-index'));
+  medicinesList.splice(idx, 1);
+
+  renderMedTags();
+});
+
+// Attach events
+analyzeBtn.addEventListener("click", analyze);
+analyzeMedBtn.addEventListener("click", analyzeMedicines);
 
 // ===============================
 // 🛡️ HELPERS
@@ -130,7 +146,6 @@ fileInput.addEventListener('change', () => {
     fileSizeSpan.textContent = (uploadedFile.size / 1024).toFixed(1) + ' KB';
     reportStatusSpan.textContent = '✅ Loaded';
     reportStatusSpan.style.color = '#10b981';
-
   } else {
     uploadedFile = null;
   }
@@ -158,7 +173,7 @@ uploadZone.addEventListener('drop', (e) => {
 });
 
 // ===============================
-// 🚀 MAIN ANALYSIS FUNCTION (REAL AI)
+// 🚀 ANALYZE REPORT (BACKEND)
 // ===============================
 async function analyze() {
   if (!uploadedFile) {
@@ -181,9 +196,6 @@ async function analyze() {
 
     const data = await res.json();
 
-    // ===============================
-    // 🎯 DISPLAY RESULT
-    // ===============================
     resultPanel.classList.remove("hidden");
 
     resultPanel.innerHTML = `
@@ -222,10 +234,53 @@ async function analyze() {
     console.error(err);
     alert("Error connecting to backend");
   } finally {
-    analyzeBtn.innerHTML = `<i class="fas fa-microscope"></i> Analyze Interactions`;
+    analyzeBtn.innerHTML = "🧠 Analyze Report";
     analyzeBtn.disabled = false;
   }
 }
+
+// ===============================
+// 💊 ANALYZE MEDICINES
+// ===============================
+function analyzeMedicines() {
+  if (medicinesList.length < 2) {
+    alert("Add at least 2 medicines");
+    return;
+  }
+
+  resultPanel.classList.remove("hidden");
+
+  resultPanel.innerHTML = `
+    <div class="result-card">
+      <h2>💊 Drug Interaction Check</h2>
+      <p>Analyzing medicines:</p>
+      <p><strong>${medicinesList.join(", ")}</strong></p>
+      <p style="margin-top:10px;">⚠️ Potential interactions may exist. Consult a doctor.</p>
+    </div>
+  `;
+
+  interactionRiskSpan.textContent = "⚠️ Check";
+}
+
+// ===============================
+// ⚡ PRESET BUTTONS
+// ===============================
+document.querySelectorAll('.preset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const meds = btn.getAttribute('data-meds');
+
+    if (!meds) return;
+
+    meds.split(',').forEach(med => {
+      const m = med.trim().toLowerCase();
+      if (m && !medicinesList.includes(m)) {
+        medicinesList.push(m);
+      }
+    });
+
+    renderMedTags();
+  });
+});
 
 // ===============================
 // 🎛️ EVENTS
@@ -236,9 +291,25 @@ medInput.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') addMedicine();
 });
 
-analyzeBtn.addEventListener('click', analyze);
-
 // ===============================
 // 🚀 INIT
 // ===============================
-renderMedTags();
+function renderMedTags() {
+  if (medicinesList.length === 0) {
+    medTagsContainer.innerHTML =
+      '<div style="color:#94a3b8; width:100%; text-align:center; padding:1rem;">✨ No medicines added yet</div>';
+    updateStats();
+    return;
+  }
+
+  medTagsContainer.innerHTML = medicinesList.map((med, idx) => `
+    <div class="med-tag">
+      <i class="fas fa-capsules"></i> ${escapeHtml(med)}
+      <button class="remove-med" data-index="${idx}">
+        ❌
+      </button>
+    </div>
+  `).join("");
+
+  updateStats();
+} 

@@ -8,7 +8,7 @@ app.use(cors());
 app.use(express.json());
 
 app.post("/analyze", (req, res) => {
-  const python = spawn("python", ["../ai-model/analyzer.py"]);
+  const python = spawn("python", ["../ai-model/main.py"]);
 
   python.stdin.write(JSON.stringify(req.body));
   python.stdin.end();
