@@ -761,3 +761,42 @@ footer {
     transform-origin: top;
   }
 }
+.card-section {
+  background: white;
+  padding: 15px;
+  border-radius: 12px;
+  margin: 15px 0;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.grid {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.value-card {
+  background: #f1f5f9;
+  padding: 10px;
+  border-radius: 10px;
+  min-width: 100px;
+  text-align: center;
+}
+
+.badge-danger {
+  background: #ef4444;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 8px;
+  margin: 5px;
+  display: inline-block;
+}
+
+.med-tag {
+  background: #e0f2fe;
+  padding: 6px 10px;
+  margin: 5px;
+  border-radius: 8px;
+  display: inline-block;
+  cursor: pointer;
+}
