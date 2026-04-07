@@ -1,5 +1,4 @@
 require("dotenv").config();
-const medicineDB = require("./medicines");
 
 const express = require("express");
 const cors = require("cors");
@@ -23,6 +22,24 @@ const client = new OpenAI({
 });
 
 // ==============================
+// 💊 FDA MEDICINE CHECK
+// ==============================
+async function isValidMedicine(med) {
+  try {
+    const res = await fetch(
+      `https://api.fda.gov/drug/label.json?search=openfda.generic_name:${med}&limit=1`
+    );
+
+    const data = await res.json();
+
+    return data.results && data.results.length > 0;
+  } catch (err) {
+    console.error("FDA API error:", err.message);
+    return false;
+  }
+}
+
+// ==============================
 // 📁 FILE UPLOAD SETUP
 // ==============================
 const uploadDir = path.join(__dirname, "uploads");
@@ -36,7 +53,7 @@ const upload = multer({ dest: uploadDir });
 // ==============================
 // 🚀 MAIN ANALYZE ROUTE
 // ==============================
-app.post("/analyze", upload.single("file"), (req, res) => {
+app.post("/analyze", upload.single("file"), async (req, res) => {
   console.log("📥 Request received");
 
   // ✅ File check
@@ -60,10 +77,20 @@ app.post("/analyze", upload.single("file"), (req, res) => {
   console.log("💊 Medicines:", medsArray);
 
   // ==============================
-  // 🧠 DATABASE VALIDATION
+  // 🧠 FDA VALIDATION
   // ==============================
-  const validMeds = medsArray.filter(med => medicineDB.includes(med));
-  const invalidMeds = medsArray.filter(med => !medicineDB.includes(med));
+  const validMeds = [];
+  const invalidMeds = [];
+
+  for (let med of medsArray) {
+    const isValid = await isValidMedicine(med);
+
+    if (isValid) {
+      validMeds.push(med);
+    } else {
+      invalidMeds.push(med);
+    }
+  }
 
   console.log("✅ Valid:", validMeds);
   console.log("❌ Invalid:", invalidMeds);
