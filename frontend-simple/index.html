@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>PharmaGuard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<h1>🏥 PharmaGuard</h1>
+
+<div class="card">
+  <h3>Upload Medical Report</h3>
+  <input type="file">
+</div>
+
+<div class="card">
+  <h3>Enter Medicines</h3>
+  <input type="text" id="meds" placeholder="e.g. aspirin, ibuprofen">
+</div>
+
+<button onclick="analyze()">Analyze</button>
+
+<div id="result" class="card hidden"></div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
