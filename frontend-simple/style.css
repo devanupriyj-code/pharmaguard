@@ -1,37 +1,742 @@
-body {
-  font-family: Arial;
-  background: #f5f7fb;
-  padding: 20px;
-}
+ * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-h1 {
-  color: #2563eb;
-}
+    body {
+      font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 100%);
+      background-attachment: fixed;
+      min-height: 100vh;
+      padding: 2rem 1.5rem;
+      position: relative;
+      overflow-x: hidden;
+    }
 
-.card {
-  background: white;
-  padding: 15px;
-  margin-top: 15px;
-  border-radius: 10px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
+    /* Animated background overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
 
-input {
-  padding: 10px;
-  width: 100%;
-  margin-top: 10px;
-}
+    /* ============================================
+       TOP LEFT CORNER ANIMATIONS
+    ============================================ */
+    .corner-animation {
+      position: fixed;
+      pointer-events: none;
+      z-index: 100;
+    }
 
-button {
-  margin-top: 20px;
-  padding: 10px 20px;
-  background: #2563eb;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
+    /* Top Left Corner - Pulsing Heartbeat & Floating Pills */
+    .top-left-corner {
+      top: 20px;
+      left: 20px;
+    }
 
-.hidden {
-  display: none;
-}
+    .heartbeat-icon {
+      font-size: 2.5rem;
+      color: rgba(255, 255, 255, 0.7);
+      filter: drop-shadow(0 0 10px rgba(255, 107, 107, 0.5));
+      animation: heartbeat 1.2s ease-in-out infinite;
+      display: inline-block;
+    }
+
+    @keyframes heartbeat {
+      0%, 100% {
+        transform: scale(1);
+        opacity: 0.7;
+      }
+      25% {
+        transform: scale(1.15);
+        opacity: 1;
+        text-shadow: 0 0 15px rgba(255, 107, 107, 0.8);
+      }
+      35% {
+        transform: scale(1.1);
+      }
+      45% {
+        transform: scale(1.2);
+        opacity: 1;
+      }
+      55% {
+        transform: scale(1);
+      }
+    }
+
+    .floating-pill {
+      position: absolute;
+      font-size: 1.2rem;
+      animation: floatPill 3s ease-in-out infinite;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+    }
+
+    .pill-1 {
+      top: 40px;
+      left: 50px;
+      animation-delay: 0s;
+    }
+
+    .pill-2 {
+      top: 70px;
+      left: 15px;
+      animation-delay: 0.8s;
+      font-size: 0.9rem;
+    }
+
+    .pill-3 {
+      top: 10px;
+      left: 80px;
+      animation-delay: 1.5s;
+      font-size: 1rem;
+    }
+
+    @keyframes floatPill {
+      0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+        opacity: 0.6;
+      }
+      50% {
+        transform: translateY(-15px) rotate(10deg);
+        opacity: 1;
+      }
+    }
+
+    /* Top Right Corner - Medical Cross & Particles */
+    .top-right-corner {
+      top: 20px;
+      right: 20px;
+    }
+
+    .medical-cross {
+      font-size: 2.5rem;
+      color: rgba(255, 255, 255, 0.7);
+      filter: drop-shadow(0 0 10px rgba(74, 222, 128, 0.5));
+      animation: spinCross 4s ease-in-out infinite;
+      display: inline-block;
+    }
+
+    @keyframes spinCross {
+      0%, 100% {
+        transform: rotate(0deg) scale(1);
+        opacity: 0.7;
+      }
+      25% {
+        transform: rotate(5deg) scale(1.05);
+        opacity: 1;
+      }
+      50% {
+        transform: rotate(0deg) scale(1);
+      }
+      75% {
+        transform: rotate(-5deg) scale(1.05);
+        opacity: 1;
+      }
+    }
+
+    .floating-particle {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.5);
+      border-radius: 50%;
+      animation: floatParticle 2.5s ease-in-out infinite;
+    }
+
+    .particle-1 {
+      top: 30px;
+      right: 60px;
+      animation-delay: 0s;
+      width: 8px;
+      height: 8px;
+      background: rgba(255, 215, 0, 0.6);
+    }
+
+    .particle-2 {
+      top: 60px;
+      right: 20px;
+      animation-delay: 0.5s;
+      width: 5px;
+      height: 5px;
+      background: rgba(139, 92, 246, 0.7);
+    }
+
+    .particle-3 {
+      top: 15px;
+      right: 90px;
+      animation-delay: 1s;
+      width: 4px;
+      height: 4px;
+      background: rgba(255, 107, 107, 0.6);
+    }
+
+    .particle-4 {
+      top: 80px;
+      right: 45px;
+      animation-delay: 1.5s;
+      width: 6px;
+      height: 6px;
+      background: rgba(74, 222, 128, 0.6);
+    }
+
+    @keyframes floatParticle {
+      0%, 100% {
+        transform: translateY(0px) translateX(0px);
+        opacity: 0.3;
+      }
+      25% {
+        transform: translateY(-12px) translateX(5px);
+        opacity: 0.8;
+      }
+      50% {
+        transform: translateY(-6px) translateX(-3px);
+        opacity: 0.5;
+      }
+      75% {
+        transform: translateY(-18px) translateX(2px);
+        opacity: 0.9;
+      }
+    }
+
+    /* Glowing orb behind corner elements */
+    .corner-glow {
+      position: absolute;
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .glow-left {
+      top: -20px;
+      left: -20px;
+      animation: glowPulse 3s ease-in-out infinite;
+    }
+
+    .glow-right {
+      top: -20px;
+      right: -20px;
+      animation: glowPulse 3s ease-in-out infinite 1.5s;
+    }
+
+    @keyframes glowPulse {
+      0%, 100% {
+        opacity: 0.4;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.8;
+        transform: scale(1.1);
+      }
+    }
+
+    /* ============================================
+       REST OF THE STYLES (Original Premium Design)
+    ============================================ */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Enhanced Header */
+    .hero {
+      text-align: center;
+      margin-bottom: 3rem;
+      animation: floatIn 0.6s ease-out;
+    }
+
+    @keyframes floatIn {
+      0% {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .hero h1 {
+      font-size: 3.5rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #FFFFFF, #FFE6F0, #FFD700);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      letter-spacing: -0.5px;
+      display: inline-flex;
+      align-items: center;
+      gap: 15px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      margin-bottom: 0.5rem;
+    }
+
+    .hero h1 i {
+      background: none;
+      color: #FFD700;
+      font-size: 3rem;
+      text-shadow: 0 0 20px rgba(255,215,0,0.5);
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      backdrop-filter: blur(10px);
+      padding: 0.5rem 1.5rem;
+      border-radius: 100px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: white;
+      margin-top: 1rem;
+      border: 1px solid rgba(255,255,255,0.3);
+    }
+
+    /* Grid Layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 1.8rem;
+      margin-bottom: 2rem;
+    }
+
+    /* Modern Cards with gradients */
+    .card-modern {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 28px;
+      padding: 1.8rem;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid rgba(255,255,255,0.3);
+      box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.2);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card-modern::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #f5576c);
+    }
+
+    .card-modern:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .card-header i {
+      font-size: 2rem;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    .card-header h3 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #2d3748;
+      margin: 0;
+    }
+
+    .card-header .badge {
+      margin-left: auto;
+      background: #fbbf24;
+      color: #1e293b;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    /* File Upload Area Enhanced */
+    .upload-zone {
+      border: 2px dashed #c7d2fe;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+      padding: 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+    }
+
+    .upload-zone:hover {
+      border-color: #8b5cf6;
+      background: linear-gradient(135deg, #fef3c7, #fed7aa);
+      transform: scale(1.02);
+    }
+
+    .upload-zone i {
+      font-size: 3rem;
+      color: #8b5cf6;
+      margin-bottom: 0.5rem;
+    }
+
+    .upload-zone p {
+      color: #475569;
+      font-weight: 500;
+    }
+
+    .upload-zone small {
+      color: #94a3b8;
+    }
+
+    #file-name {
+      margin-top: 1rem;
+      padding: 0.5rem;
+      background: #e0e7ff;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      color: #4338ca;
+      font-weight: 500;
+    }
+
+    /* Medicine Input Area */
+    .med-input-group {
+      display: flex;
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .med-input-group input {
+      flex: 1;
+      padding: 0.9rem 1.2rem;
+      border: 2px solid #e2e8f0;
+      border-radius: 16px;
+      font-size: 1rem;
+      font-family: inherit;
+      transition: all 0.3s;
+      background: white;
+    }
+
+    .med-input-group input:focus {
+      outline: none;
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      border: none;
+      padding: 0.9rem 1.8rem;
+      border-radius: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px -5px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    /* Medicine Tags */
+    .med-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 1rem;
+      min-height: 60px;
+    }
+
+    .med-tag {
+      background: linear-gradient(135deg, #dbeafe, #ede9fe);
+      color: #5b21b6;
+      padding: 0.5rem 1rem;
+      border-radius: 40px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+      animation: tagPop 0.3s ease;
+    }
+
+    @keyframes tagPop {
+      0% {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .med-tag button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #ef4444;
+      font-weight: bold;
+      font-size: 1rem;
+      padding: 0 4px;
+      transition: transform 0.2s;
+    }
+
+    .med-tag button:hover {
+      transform: scale(1.2);
+    }
+
+    /* Quick Presets */
+    .presets {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .presets p {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+    }
+
+    .preset-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .preset-btn {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      padding: 0.4rem 1rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .preset-btn:hover {
+      background: #8b5cf6;
+      color: white;
+      border-color: #8b5cf6;
+    }
+
+    /* Stats Widget */
+    .stats-widget {
+      background: linear-gradient(135deg, #fef3c7, #fde68a);
+      border-radius: 20px;
+      padding: 1rem;
+      margin-top: 1rem;
+      display: flex;
+      justify-content: space-around;
+      text-align: center;
+    }
+
+    .stat-item {
+      flex: 1;
+    }
+
+    .stat-number {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #92400e;
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      color: #78350f;
+      font-weight: 600;
+    }
+
+    /* Analyze Button */
+    .analyze-wrapper {
+      text-align: center;
+      margin: 2rem 0;
+    }
+
+    .btn-analyze {
+      background: linear-gradient(135deg, #f093fb, #f5576c);
+      border: none;
+      padding: 1.2rem 2.5rem;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: white;
+      border-radius: 60px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 15px 30px -10px rgba(245, 87, 108, 0.5);
+    }
+
+    .btn-analyze:hover {
+      transform: scale(1.05);
+      box-shadow: 0 20px 40px -10px rgba(245, 87, 108, 0.6);
+    }
+
+    /* Result Card */
+    .result-card {
+      background: white;
+      border-radius: 28px;
+      padding: 2rem;
+      margin-top: 1rem;
+      animation: slideUp 0.5s ease;
+      box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.2);
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid #f1f5f9;
+    }
+
+    .result-header i {
+      font-size: 2rem;
+    }
+
+    .risk-high { border-left: 6px solid #ef4444; }
+    .risk-moderate { border-left: 6px solid #f59e0b; }
+    .risk-low { border-left: 6px solid #10b981; }
+
+    .interaction-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .interaction-list li {
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      background: #f8fafc;
+      border-radius: 12px;
+      display: flex;
+      align-items: start;
+      gap: 10px;
+    }
+
+    /* Emergency Contact Cards */
+    .emergency-contacts {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 1rem;
+    }
+
+    .emergency-card {
+      background: linear-gradient(135deg, #ffedd5, #fed7aa);
+      border-radius: 16px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: all 0.2s;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .emergency-card:hover {
+      transform: translateX(5px);
+      background: linear-gradient(135deg, #fed7aa, #fde68a);
+    }
+
+    .emergency-icon {
+      font-size: 1.8rem;
+    }
+
+    .emergency-info {
+      flex: 1;
+    }
+
+    .emergency-number {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #92400e;
+      letter-spacing: 0.5px;
+    }
+
+    .emergency-label {
+      font-size: 0.7rem;
+      color: #78350f;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .emergency-note {
+      font-size: 0.65rem;
+      color: #b45309;
+      margin-top: 2px;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding: 1.5rem;
+      color: white;
+      font-size: 0.8rem;
+      background: rgba(0,0,0,0.2);
+      border-radius: 20px;
+      backdrop-filter: blur(5px);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 1rem;
+      }
+      .hero h1 {
+        font-size: 2rem;
+      }
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+      .top-left-corner, .top-right-corner {
+        transform: scale(0.7);
+        transform-origin: top;
+      }
+    }

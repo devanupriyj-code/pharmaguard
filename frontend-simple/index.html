@@ -1,28 +1,217 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>PharmaGuard</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-<h1>🏥 PharmaGuard</h1>
 
-<div class="card">
-  <h3>Upload Medical Report</h3>
-  <input type="file">
+  <div class="corner-animation top-left-corner">
+    <div class="corner-glow glow-left"></div>
+    <div class="heartbeat-icon">
+      <i class="fas fa-heartbeat"></i>
+    </div>
+    <div class="floating-pill pill-1">💊</div>
+    <div class="floating-pill pill-2">💊</div>
+    <div class="floating-pill pill-3">💊</div>
+  </div>
+
+  <!-- ============================================
+       TOP RIGHT CORNER ANIMATIONS
+  ============================================ -->
+  <div class="corner-animation top-right-corner">
+    <div class="corner-glow glow-right"></div>
+    <div class="medical-cross">
+      <i class="fas fa-plus-circle"></i>
+    </div>
+    <div class="floating-particle particle-1"></div>
+    <div class="floating-particle particle-2"></div>
+    <div class="floating-particle particle-3"></div>
+    <div class="floating-particle particle-4"></div>
+  </div>
+
+<div class="container">
+  <!-- Enhanced Hero Section -->
+  <div class="hero">
+    <h1>
+      <i class="fas fa-shield-virus"></i>
+      PharmaGuard
+    </h1>
+    <div class="hero-badge">
+      <i class="fas fa-robot"></i> AI-Powered Safety Check | Real-time Interaction Analysis
+    </div>
+  </div>
+
+  <!-- Dashboard Grid -->
+  <div class="dashboard-grid">
+    <!-- Upload Card -->
+    <div class="card-modern">
+      <div class="card-header">
+        <i class="fas fa-file-medical"></i>
+        <h3>Medical Report</h3>
+        <span class="badge"><i class="fas fa-cloud-upload-alt"></i> Secure</span>
+      </div>
+      <div class="upload-zone" id="uploadZone">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <p>Click or drag to upload</p>
+        <small>Supports PDF, JPG, PNG, TXT</small>
+        <input type="file" id="reportFile" accept=".pdf,.jpg,.jpeg,.png,.txt" style="display: none;">
+      </div>
+      <div id="file-name" style="text-align: center;"></div>
+      <div class="stats-widget" style="margin-top: 1rem;">
+        <div class="stat-item">
+          <div class="stat-number" id="reportStatus">—</div>
+          <div class="stat-label">Report Status</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number" id="fileSize">0 KB</div>
+          <div class="stat-label">File Size</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Medicines Card -->
+    <div class="card-modern">
+      <div class="card-header">
+        <i class="fas fa-pills"></i>
+        <h3>Medication List</h3>
+        <span class="badge"><i class="fas fa-plus-circle"></i> Add Drugs</span>
+      </div>
+      <div class="med-input-group">
+        <input type="text" id="medInput" placeholder="e.g., warfarin, aspirin, metformin...">
+        <button class="btn-primary" id="addMedBtn">
+          <i class="fas fa-plus"></i> Add
+        </button>
+      </div>
+      <div id="medTagsContainer" class="med-tags">
+        <div style="color:#94a3b8; width:100%; text-align:center; padding:1rem;">✨ No medicines added yet</div>
+      </div>
+      
+      <!-- Quick Presets -->
+      <div class="presets">
+        <p><i class="fas fa-bolt"></i> Quick Presets (Common Combinations)</p>
+        <div class="preset-buttons">
+          <button class="preset-btn" data-meds="aspirin,clopidogrel">💊 Aspirin + Clopidogrel</button>
+          <button class="preset-btn" data-meds="warfarin,amoxicillin">⚠️ Warfarin + Antibiotic</button>
+          <button class="preset-btn" data-meds="lisinopril,metformin">❤️ Cardiac + Diabetes</button>
+          <button class="preset-btn" data-meds="ibuprofen,aspirin">🔥 NSAID + Aspirin</button>
+        </div>
+      </div>
+      
+      <!-- Dynamic Stats -->
+      <div class="stats-widget" style="margin-top: 1rem; background: linear-gradient(135deg, #dbeafe, #c7d2fe);">
+        <div class="stat-item">
+          <div class="stat-number" id="medCount">0</div>
+          <div class="stat-label">Medicines Added</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number" id="interactionRisk">—</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Safety Tips Card with Emergency Contacts -->
+    <div class="card-modern">
+      <div class="card-header">
+        <i class="fas fa-lightbulb"></i>
+        <h3>Safety Tips</h3>
+        <span class="badge"><i class="fas fa-heartbeat"></i> Daily Reminder</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="background: #fef3c7; padding: 12px; border-radius: 16px;">
+          <i class="fas fa-clock" style="color: #d97706;"></i>
+          <strong style="margin-left: 8px;">Always take medicines at prescribed times</strong>
+        </div>
+        <div style="background: #e0e7ff; padding: 12px; border-radius: 16px;">
+          <i class="fas fa-notes-medical" style="color: #4f46e5;"></i>
+          <strong style="margin-left: 8px;">Keep an updated medicine list for emergencies</strong>
+        </div>
+        <div style="background: #d1fae5; padding: 12px; border-radius: 16px;">
+          <i class="fas fa-flask" style="color: #059669;"></i>
+          <strong style="margin-left: 8px;">Avoid alcohol with most prescriptions</strong>
+        </div>
+      </div>
+      
+      <!-- Emergency Contacts Section -->
+      <div style="margin-top: 1rem;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+          <i class="fas fa-phone-alt" style="color: #dc2626;"></i>
+          <strong style="font-size: 0.85rem; color: #991b1b;">🚨 EMERGENCY CONTACTS</strong>
+        </div>
+        <div class="emergency-contacts">
+          <!-- Poison Control -->
+          <div class="emergency-card">
+            <div class="emergency-icon">☠️</div>
+            <div class="emergency-info">
+              <div class="emergency-number">1-800-222-1222</div>
+              <div class="emergency-label">Poison Control (24/7)</div>
+              <div class="emergency-note">For medication overdose or poisoning emergencies</div>
+            </div>
+            <i class="fas fa-shield-alt" style="color: #d97706;"></i>
+          </div>
+          
+          <!-- Mabulance - India Emergency Ambulance -->
+          <div class="emergency-card" style="background: linear-gradient(135deg, #fee2e2, #fecaca);">
+            <div class="emergency-icon">🚑</div>
+            <div class="emergency-info">
+              <div class="emergency-number">+91-806-900-0000</div>
+              <div class="emergency-label">AMBULANCE 🚑 INDIA</div>
+              <div class="emergency-note">24/7 Emergency Ambulance Service | Bengaluru & India</div>
+            </div>
+            <i class="fas fa-ambulance" style="color: #dc2626;"></i>
+          </div>
+          
+          <!-- National Ambulance Service India -->
+          <div class="emergency-card" style="background: linear-gradient(135deg, #dbeafe, #bfdbfe);">
+            <div class="emergency-icon">🚨</div>
+            <div class="emergency-info">
+              <div class="emergency-number">108</div>
+              <div class="emergency-label">National Ambulance Service (India)</div>
+              <div class="emergency-note">Toll-free emergency ambulance across India</div>
+            </div>
+            <i class="fas fa-phone-alt" style="color: #2563eb;"></i>
+          </div>
+        </div>
+      </div>
+      
+      <div class="stats-widget" style="margin-top: 1rem; background: linear-gradient(135deg, #fce7f3, #fbcfe8);">
+        <div class="stat-item">
+          <i class="fas fa-phone-alt"></i>
+          <div class="stat-label">📞 For Medical Emergency</div>
+          <div style="font-size: 0.9rem; font-weight: bold;">Call 108 (India) or Mabulance</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analyze Button -->
+  <div class="analyze-wrapper">
+    <button class="btn-analyze" id="analyzeReportBtn">
+  🧠 Analyze Report
+</button>
+  </div>
+   <div class="analyze-wrapper">
+    <button class="btn-analyze" id="analyzeMedBtn">
+  💊 Check Drug Interactions
+</button>
+  </div>
+
+  <!-- Result Panel -->
+  <div id="resultPanel" class="hidden"></div>
+  
+  <footer>
+    <i class="fas fa-exclamation-triangle"></i> Disclaimer: This is an educational simulation tool. Always consult a healthcare professional before making medical decisions.
+    <br><br>
+    <i class="fas fa-ambulance"></i> Emergency Helplines: 108 (India) | Mabulance: +91-806-900-0000 | Poison Control: 1-800-222-1222
+  </footer>
 </div>
-
-<div class="card">
-  <h3>Enter Medicines</h3>
-  <input type="text" id="meds" placeholder="e.g. aspirin, ibuprofen">
-</div>
-
-<button onclick="analyze()">Analyze</button>
-
-<div id="result" class="card hidden"></div>
 
 <script src="script.js"></script>
-
 </body>
 </html>
