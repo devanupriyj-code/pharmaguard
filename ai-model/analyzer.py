@@ -1,7 +1,5 @@
 import pdfplumber
-import sys
-import json
-import re   # ✅ NEW
+import re
 
 def extract_values_from_pdf(file_path):
     text = ""
@@ -12,56 +10,43 @@ def extract_values_from_pdf(file_path):
             if extracted:
                 text += extracted + "\n"
 
-    hb = None
-    glucose = None
-
     lines = text.lower().split("\n")
 
-    for line in lines:
-        # 🧠 DEBUG (optional)
-        # print(line)
+    data = {}
 
-        # 🩸 Hemoglobin
-        if "hemoglobin" in line:
-            match = re.search(r"\d+\.?\d*", line)
-            if match:
-                hb = float(match.group())
-
-        # 🍬 Glucose (handles "fasting blood glucose")
-        if "glucose" in line:
-            match = re.search(r"\d+\.?\d*", line)
-            if match:
-                glucose = float(match.group())
-
-    return hb, glucose
-
-
-def analyze(hb, glucose):
-    conditions = []
-    diet = []
-
-    if hb is not None and hb < 12:
-        conditions.append("Anemia")
-        diet.append("Iron-rich foods (spinach, dates)")
-
-    if glucose is not None and glucose > 140:
-        conditions.append("High Blood Sugar")
-        diet.append("Avoid sugar, eat fiber-rich foods")
-
-    return conditions, diet
-
-
-if __name__ == "__main__":
-    file_path = sys.argv[1]
-
-    hb, glucose = extract_values_from_pdf(file_path)
-    conditions, diet = analyze(hb, glucose)
-
-    result = {
-        "hb": hb,
-        "glucose": glucose,
-        "conditions": conditions,
-        "diet": diet
+    keywords = {
+        "hemoglobin": "hb",
+        "glucose": "glucose",
+        "cholesterol": "cholesterol",
+        "creatinine": "creatinine",
+        "vitamin d": "vitamin_d",
+        "wbc": "wbc",
+        "platelet": "platelets"
     }
 
-    print(json.dumps(result))
+    for line in lines:
+        for key in keywords:
+            if key in line:
+                match = re.search(r"\d+\.?\d*", line)
+                if match:
+                    data[keywords[key]] = float(match.group())
+
+    return data
+
+
+def analyze_report(data):
+    conditions = []
+
+    if "hb" in data and data["hb"] < 12:
+        conditions.append("Anemia")
+
+    if "glucose" in data and data["glucose"] > 140:
+        conditions.append("High Blood Sugar")
+
+    if "cholesterol" in data and data["cholesterol"] > 200:
+        conditions.append("High Cholesterol")
+
+    if "vitamin_d" in data and data["vitamin_d"] < 30:
+        conditions.append("Vitamin D Deficiency")
+
+    return conditions
