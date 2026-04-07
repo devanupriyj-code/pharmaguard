@@ -4,41 +4,45 @@
   <meta charset="UTF-8">
   <title>PharmaGuard</title>
 
-  <!-- Font -->
+  <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Inter&display=swap" rel="stylesheet">
 
-  <!-- ✅ FIX: Font Awesome added -->
+  <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-  <!-- Your CSS -->
+  <!-- CSS -->
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-  <!-- LEFT CORNER -->
-  <div class="corner-animation top-left-corner">
-    <div class="corner-glow glow-left"></div>
-    <div class="heartbeat-icon">
-      <i class="fas fa-heartbeat"></i>
-    </div>
-    <div class="floating-pill pill-1">💊</div>
-    <div class="floating-pill pill-2">💊</div>
-    <div class="floating-pill pill-3">💊</div>
+<!-- ============================= -->
+<!-- 🎨 CORNER ANIMATIONS -->
+<!-- ============================= -->
+<div class="corner-animation top-left-corner">
+  <div class="corner-glow glow-left"></div>
+  <div class="heartbeat-icon">
+    <i class="fas fa-heartbeat"></i>
   </div>
+  <div class="floating-pill pill-1">💊</div>
+  <div class="floating-pill pill-2">💊</div>
+  <div class="floating-pill pill-3">💊</div>
+</div>
 
-  <!-- RIGHT CORNER -->
-  <div class="corner-animation top-right-corner">
-    <div class="corner-glow glow-right"></div>
-    <div class="medical-cross">
-      <i class="fas fa-plus-circle"></i>
-    </div>
-    <div class="floating-particle particle-1"></div>
-    <div class="floating-particle particle-2"></div>
-    <div class="floating-particle particle-3"></div>
-    <div class="floating-particle particle-4"></div>
+<div class="corner-animation top-right-corner">
+  <div class="corner-glow glow-right"></div>
+  <div class="medical-cross">
+    <i class="fas fa-plus-circle"></i>
   </div>
+  <div class="floating-particle particle-1"></div>
+  <div class="floating-particle particle-2"></div>
+  <div class="floating-particle particle-3"></div>
+  <div class="floating-particle particle-4"></div>
+</div>
 
+<!-- ============================= -->
+<!-- 📦 MAIN CONTAINER -->
+<!-- ============================= -->
 <div class="container">
 
   <!-- HERO -->
@@ -53,49 +57,133 @@
   </div>
 
   <!-- ============================= -->
-  <!-- 📄 UPLOAD -->
+  <!-- 🧩 DASHBOARD GRID -->
   <!-- ============================= -->
-  <div class="card">
-    <h3>📄 Upload Report</h3>
+  <div class="dashboard-grid">
 
-    <!-- ✅ File input -->
-    <input type="file" id="reportFile">
+    <!-- ============================= -->
+    <!-- 📄 MEDICAL REPORT -->
+    <!-- ============================= -->
+    <div class="card-modern">
 
-    <!-- ✅ Show selected file -->
-    <div id="file-name" style="margin-top:10px; color:#555;"></div>
+      <div class="card-header">
+        <i class="fas fa-file-medical"></i>
+        <h3>Medical Report</h3>
+        <span class="badge">Secure</span>
+      </div>
+
+      <div class="upload-zone" onclick="document.getElementById('reportFile').click()">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <p>Click or drag to upload</p>
+        <small>Supports PDF, JPG, PNG, TXT</small>
+        <input type="file" id="reportFile" hidden>
+      </div>
+
+      <div id="file-name"></div>
+
+      <div class="analyze-wrapper">
+        <button id="analyzeReportBtn" class="btn-analyze">
+          <i class="fas fa-brain"></i> Analyze Report
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ============================= -->
+    <!-- 💊 MEDICATION LIST -->
+    <!-- ============================= -->
+    <div class="card-modern">
+
+      <div class="card-header">
+        <i class="fas fa-pills"></i>
+        <h3>Medication List</h3>
+        <span class="badge">Add Drugs</span>
+      </div>
+
+      <div class="med-input-group">
+        <input type="text" id="medInput" placeholder="e.g., aspirin, metformin">
+        <button id="addMedBtn" class="btn-primary">
+          <i class="fas fa-plus"></i> Add
+        </button>
+      </div>
+
+      <div id="medTagsContainer" class="med-tags"></div>
+
+      <!-- Presets -->
+      <div class="presets">
+        <p>Quick Presets</p>
+        <div class="preset-buttons">
+          <button class="preset-btn">Aspirin + Clopidogrel</button>
+          <button class="preset-btn">Warfarin + Antibiotic</button>
+          <button class="preset-btn">Cardiac + Diabetes</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-widget">
+        <div class="stat-item">
+          <div class="stat-number" id="medCount">0</div>
+          <div class="stat-label">Medicines</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number" id="riskLevel">-</div>
+          <div class="stat-label">Risk Level</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ============================= -->
+    <!-- 💡 SAFETY TIPS -->
+    <!-- ============================= -->
+    <div class="card-modern">
+
+      <div class="card-header">
+        <i class="fas fa-lightbulb"></i>
+        <h3>Safety Tips</h3>
+        <span class="badge">Daily Reminder</span>
+      </div>
+
+      <div class="emergency-contacts">
+
+        <div class="emergency-card">
+          <div class="emergency-icon">💊</div>
+          <div class="emergency-info">
+            <div class="emergency-number">Take medicines on time</div>
+            <div class="emergency-label">Routine</div>
+          </div>
+        </div>
+
+        <div class="emergency-card">
+          <div class="emergency-icon">📋</div>
+          <div class="emergency-info">
+            <div class="emergency-number">Keep updated medicine list</div>
+            <div class="emergency-label">Safety</div>
+          </div>
+        </div>
+
+        <div class="emergency-card">
+          <div class="emergency-icon">🚫</div>
+          <div class="emergency-info">
+            <div class="emergency-number">Avoid alcohol with meds</div>
+            <div class="emergency-label">Warning</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
   </div>
 
   <!-- ============================= -->
-  <!-- 💊 MEDICINES -->
+  <!-- 📊 RESULT PANEL -->
   <!-- ============================= -->
-  <div class="card">
-    <h3>💊 Medicines</h3>
-
-    <input type="text" id="medInput" placeholder="Enter medicine">
-    <button id="addMedBtn">Add</button>
-
-    <!-- Medicine tags -->
-    <div id="medTagsContainer" style="margin-top:10px;"></div>
-  </div>
-
-  <!-- ============================= -->
-  <!-- 🧠 BUTTONS -->
-  <!-- ============================= -->
-  <div class="card">
-    <button id="analyzeReportBtn">🧠 Analyze Report</button>
-    <button id="analyzeMedBtn">💊 Check Medicines</button>
-  </div>
-
-  <!-- ============================= -->
-  <!-- 📊 RESULT -->
-  <!-- ============================= -->
-  <div id="resultPanel" class="hidden" style="margin-top:20px;"></div>
+  <div id="resultPanel" class="hidden"></div>
 
 </div>
 
-<!-- ============================= -->
 <!-- JS -->
-<!-- ============================= -->
 <script src="script.js"></script>
 
 </body>

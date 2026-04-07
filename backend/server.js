@@ -1,3 +1,5 @@
+require("dotenv").config();
+const medicineDB = require("./medicines");
 
 const express = require("express");
 const cors = require("cors");
@@ -5,6 +7,7 @@ const multer = require("multer");
 const { spawn } = require("child_process");
 const path = require("path");
 const fs = require("fs");
+const OpenAI = require("openai");
 
 const app = express();
 
@@ -12,7 +15,15 @@ app.use(cors());
 app.use(express.json());
 
 // ==============================
-// 📁 File Upload Config
+// 🔐 GROQ SETUP
+// ==============================
+const client = new OpenAI({
+  apiKey: process.env.GROQ_API_KEY,
+  baseURL: "https://api.groq.com/openai/v1"
+});
+
+// ==============================
+// 📁 FILE UPLOAD SETUP
 // ==============================
 const uploadDir = path.join(__dirname, "uploads");
 
@@ -23,90 +34,213 @@ if (!fs.existsSync(uploadDir)) {
 const upload = multer({ dest: uploadDir });
 
 // ==============================
-// 🧠 REPORT ANALYZER (WITH FILE)
+// 🚀 MAIN ANALYZE ROUTE
 // ==============================
-app.post("/analyze-report", upload.single("file"), (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
+app.post("/analyze", upload.single("file"), (req, res) => {
+  console.log("📥 Request received");
 
-    const filePath = req.file.path;
+  // ✅ File check
+  if (!req.file) {
+    return res.status(400).json({ error: "No file uploaded" });
+  }
 
-    console.log("📄 File:", filePath);
+  const filePath = req.file.path;
+  const medicines = req.body.medicines || "";
 
-    const pythonPath = path.resolve(__dirname, "../ai-model/main.py");
+  // ==============================
+  // 💊 MEDICINE INPUT PROCESSING
+  // ==============================
+  const medsArray = medicines
+    ? medicines
+        .split(/[, ]+/)
+        .map(m => m.trim().toLowerCase())
+        .filter(Boolean)
+    : [];
 
-    const python = spawn("python", [pythonPath, filePath]);
+  console.log("💊 Medicines:", medsArray);
 
-    let result = "";
-    let errorData = "";
+  // ==============================
+  // 🧠 DATABASE VALIDATION
+  // ==============================
+  const validMeds = medsArray.filter(med => medicineDB.includes(med));
+  const invalidMeds = medsArray.filter(med => !medicineDB.includes(med));
 
-    python.stdout.on("data", (data) => {
-      result += data.toString();
-    });
+  console.log("✅ Valid:", validMeds);
+  console.log("❌ Invalid:", invalidMeds);
 
-    python.stderr.on("data", (data) => {
-      console.error("PYTHON ERROR:", data.toString());
-      errorData += data.toString();
-    });
+  // ==============================
+  // 🐍 RUN PYTHON
+  // ==============================
+  const pythonProcess = spawn("python", [
+    path.join(__dirname, "../ai-model/main.py"),
+    filePath
+  ]);
 
-    python.on("close", (code) => {
-      if (code !== 0) {
-        return res.status(500).json({
-          error: "Python failed",
-          details: errorData
+  let result = "";
+
+  pythonProcess.stdout.on("data", (data) => {
+    result += data.toString();
+  });
+
+  pythonProcess.stderr.on("data", (data) => {
+    console.error("❌ Python Error:", data.toString());
+  });
+
+  pythonProcess.on("close", async () => {
+    console.log("✅ Python finished");
+    console.log("🐍 RAW PYTHON OUTPUT:", result);
+
+    try {
+      if (!result || result.trim() === "") {
+        throw new Error("Python returned empty result");
+      }
+
+      // ==============================
+      // ✅ SAFE JSON PARSE (PYTHON)
+      // ==============================
+      let parsed;
+      try {
+        const jsonMatch = result.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("Invalid Python output");
+
+        parsed = JSON.parse(jsonMatch[0]);
+      } catch {
+        throw new Error("Python JSON parse failed");
+      }
+
+      const values = parsed.values || {};
+
+      // ==============================
+      // 🚫 BLOCK INVALID MEDICINES
+      // ==============================
+      if (validMeds.length === 0) {
+        return res.json({
+          extractedData: values,
+          ai: {
+            error: `Medicine not recognized: ${invalidMeds.join(", ")}`,
+            conditions: [],
+            risks: [],
+            drug_interactions: [],
+            side_effects: [],
+            food_warnings: [],
+            diet: [],
+            precautions: []
+          }
         });
       }
+
+      // ==============================
+      // ⚠️ PARTIAL INVALID WARNING
+      // ==============================
+      if (invalidMeds.length > 0) {
+        console.log("⚠️ Ignoring invalid medicines:", invalidMeds);
+      }
+
+      // ==============================
+      // ⚡ COMPACT DATA
+      // ==============================
+      const compactData = Object.entries(values)
+        .map(([k, v]) => `${k}:${v}`)
+        .join(", ");
+
+      const safeData = compactData || "no data";
+
+      // ==============================
+      // 🧠 AI PROMPT
+      // ==============================
+      const prompt = `
+You are a STRICT medical safety AI.
+
+Patient Data: ${safeData}
+
+Medicines: ${validMeds.join(", ") || "none"}
+
+TASK:
+1. Analyze each medicine
+2. Compare every pair of medicines
+3. Identify known drug interactions
+
+Return ONLY JSON:
+{
+  "conditions": [],
+  "risks": [],
+  "drug_interactions": [
+    {
+      "drugs": [],
+      "severity": "",
+      "effect": "",
+      "advice": ""
+    }
+  ],
+  "side_effects": [],
+  "food_warnings": [],
+  "diet": [],
+  "precautions": []
+}
+
+STRICT RULES:
+- Only analyze REAL known medicines
+- Do NOT hallucinate interactions
+- Return [] if no valid interaction found
+- Severity must be LOW / MODERATE / HIGH
+- No explanation outside JSON
+`;
+
+      // ==============================
+      // 🤖 AI CALL
+      // ==============================
+      const response = await client.chat.completions.create({
+        model: "llama-3.1-8b-instant",
+        messages: [
+          { role: "system", content: "You are a strict medical safety AI." },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.2,
+        max_completion_tokens: 300
+      });
+
+      const aiText = response.choices[0].message.content;
+
+      console.log("🧠 AI RAW:", aiText);
+
+      // ==============================
+      // ✅ SAFE JSON PARSE (AI)
+      // ==============================
+      let aiData;
 
       try {
-        const parsed = JSON.parse(result);
-        res.json(parsed);
-      } catch (err) {
-        res.status(500).json({
-          error: "Invalid JSON from Python",
-          raw: result
-        });
+        const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("Invalid AI output");
+
+        aiData = JSON.parse(jsonMatch[0]);
+      } catch {
+        aiData = {
+          error: "Invalid JSON from AI",
+          raw: aiText
+        };
       }
-    });
 
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server crashed" });
-  }
-});
+      // ==============================
+      // 📤 RESPONSE
+      // ==============================
+      res.json({
+        extractedData: values,
+        ai: aiData
+      });
 
-// ==============================
-// 💊 MEDICINE ANALYZER (NO FILE)
-// ==============================
-app.post("/check-medicines", (req, res) => {
-  try {
-    const medicines = req.body.medicines;
+    } catch (err) {
+      console.error("❌ Server Error:", err.message);
 
-    console.log("💊 Medicines received:", medicines);
-
-    if (!medicines || medicines.length === 0) {
-      return res.status(400).json({ error: "No medicines provided" });
+      res.status(500).json({
+        error: "Processing failed",
+        details: err.message
+      });
     }
-
-    res.json({
-      risk: "Medium",
-      advice: "Some medicines may interact"
-    });
-
-  } catch (err) {
-    console.error("❌ Medicine route error:", err);
-    res.status(500).json({ error: "Server crashed" });
-  }
+  });
 });
 
 // ==============================
-// ❤️ HEALTH CHECK
-// ==============================
-app.get("/", (req, res) => {
-  res.send("Backend working ✅");
-});
-
+// 🚀 START SERVER
 // ==============================
 app.listen(5000, () => {
   console.log("🚀 Server running on http://localhost:5000");

@@ -1,6 +1,9 @@
 import pdfplumber
 import re
 
+# ==============================
+# 📄 Extract values from PDF
+# ==============================
 def extract_values_from_pdf(file_path):
     text = ""
 
@@ -34,19 +37,6 @@ def extract_values_from_pdf(file_path):
     return data
 
 
-def analyze_report(data):
-    conditions = []
-
-    if "hb" in data and data["hb"] < 12:
-        conditions.append("Anemia")
-
-    if "glucose" in data and data["glucose"] > 140:
-        conditions.append("High Blood Sugar")
-
-    if "cholesterol" in data and data["cholesterol"] > 200:
-        conditions.append("High Cholesterol")
-
-    if "vitamin_d" in data and data["vitamin_d"] < 30:
-        conditions.append("Vitamin D Deficiency")
-
-    return conditions
+# ==============================
+# 🧠 Basic rule-based analysis
+# ==============================
