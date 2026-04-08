@@ -36,8 +36,21 @@ document.getElementById("analyzeReportBtn").addEventListener("click", async () =
     if (!res.ok) throw new Error("Server error");
 
     const data = await res.json();
+    console.log("FULL RESPONSE:", data); // 🔥 DEBUG
 
     resultPanel.classList.remove("hidden");
+
+    // ==============================
+    // 🔥 FIX: HANDLE BOTH CASES
+    // ==============================
+    let extractedData = data.extracted || data.values || {};
+
+    if (Object.keys(extractedData).length > 0) {
+      data.analyzed = processHealthData(extractedData);
+    } else {
+      data.analyzed = data.analyzed || [];
+    }
+
     renderReport(data);
 
   } catch (err) {
@@ -47,7 +60,55 @@ document.getElementById("analyzeReportBtn").addEventListener("click", async () =
 });
 
 // ==============================
-// 🎨 REPORT UI RENDER (FINAL)
+// 🧠 PROCESS HEALTH DATA
+// ==============================
+function processHealthData(extracted) {
+  const result = [];
+
+  for (const key in extracted) {
+    const item = extracted[key];
+
+    const value = item.value;
+    const range = item.range;
+
+    let status = "unknown";
+
+    if (value != null && range) {
+
+      // RANGE: 70-99
+      if (range.includes("-")) {
+        const [min, max] = range.split("-").map(Number);
+
+        if (value < min) status = "low";
+        else if (value > max) status = "high";
+        else status = "normal";
+      }
+
+      // RANGE: <200
+      else if (range.includes("<")) {
+        const max = Number(range.replace("<", ""));
+        status = value < max ? "normal" : "high";
+      }
+
+      // RANGE: >30
+      else if (range.includes(">")) {
+        const min = Number(range.replace(">", ""));
+        status = value > min ? "normal" : "low";
+      }
+    }
+
+    result.push({
+      key,
+      value,
+      status
+    });
+  }
+
+  return result;
+}
+
+// ==============================
+// 🎨 REPORT UI RENDER
 // ==============================
 function renderReport(data) {
 
@@ -60,7 +121,7 @@ function renderReport(data) {
     return;
   }
 
-  const values = data.extractedData || {};
+  const analyzed = data.analyzed || [];
   const ai = data.ai || {};
 
   const conditions = ai.conditions || [];
@@ -80,17 +141,28 @@ function renderReport(data) {
   // ==============================
   html += `<div class="card-section"><h3>🧪 Health Values</h3><div class="grid">`;
 
-  if (Object.keys(values).length === 0) {
+  if (analyzed.length === 0) {
     html += `<p>No data extracted</p>`;
   } else {
-    for (let key in values) {
+    analyzed.forEach(item => {
+
+      const color =
+        item.status === "normal" ? "green" :
+        item.status === "high" ? "red" :
+        item.status === "low" ? "orange" : "gray";
+
       html += `
         <div class="value-card">
-          <h4>${key.toUpperCase()}</h4>
-          <p>${values[key]}</p>
+          <h4>${item.key.toUpperCase()}</h4>
+          <p>
+            ${item.value ?? "N/A"} 
+            <span style="color:${color}; font-weight:600;">
+              (${item.status})
+            </span>
+          </p>
         </div>
       `;
-    }
+    });
   }
 
   html += `</div></div>`;
@@ -100,14 +172,15 @@ function renderReport(data) {
   // ==============================
   html += `<div class="card-section"><h3>⚠️ Conditions</h3>`;
 
-  html += conditions.length
-    ? conditions.map(c => `
-        <span class="badge">
-          <strong>${c.name}</strong> (${c.code})<br/>
-          <small>${c.reason}</small>
+  const abnormal = analyzed.filter(a => a.status === "high" || a.status === "low");
+
+  html += abnormal.length
+    ? abnormal.map(a => `
+        <span class="badge" style="background:#ffe6e6;">
+          <strong>${a.key.toUpperCase()}</strong> is ${a.status.toUpperCase()}
         </span>
       `).join(" ")
-    : `<p>No major issues detected ✅</p>`;
+    : `<p style="color:green;">Healthy ✅ All values are normal</p>`;
 
   html += `</div>`;
 
@@ -116,14 +189,9 @@ function renderReport(data) {
   // ==============================
   html += `<div class="card-section"><h3>🚨 Risks</h3>`;
 
-  html += risks.length
-    ? `<ul>${risks.map(r => `
-        <li>
-          <strong>${r.issue}</strong><br/>
-          <small>${r.reason}</small>
-        </li>
-      `).join("")}</ul>`
-    : `<p>No major risks</p>`;
+  html += abnormal.length
+    ? `<p style="color:red;">Potential health risks detected ⚠️</p>`
+    : `<p style="color:green;">No major risks ✅</p>`;
 
   html += `</div>`;
 
@@ -133,15 +201,14 @@ function renderReport(data) {
   html += `<div class="card-section"><h3>💊 Drug Interactions</h3>`;
 
   if (interactions.length === 0) {
-    html += `<p style="color:green">No harmful interactions detected ✅</p>`;
+    html += `<p style="color:green;">No harmful interactions detected ✅</p>`;
   } else {
     html += `<ul>`;
     interactions.forEach(d => {
       html += `
-        <li style="margin-bottom:10px;">
-          <strong>${d.drugs.join(" + ")}</strong><br/>
-          🔥 Severity: <b>${d.severity}</b><br/>
-          💡 Advice:<br/>
+        <li>
+          <strong>${(d.drugs || []).join(" + ")}</strong><br/>
+          🔥 ${d.severity}<br/>
           <small>${d.advice}</small>
         </li>
       `;
@@ -157,11 +224,7 @@ function renderReport(data) {
   html += `<div class="card-section"><h3>🥗 Diet</h3>`;
 
   html += diet.length
-    ? `<ul>${diet.map(d => `
-        <li>
-          <strong>${d.food}</strong> - ${d.benefit}
-        </li>
-      `).join("")}</ul>`
+    ? `<ul>${diet.map(d => `<li>${d.food} - ${d.benefit}</li>`).join("")}</ul>`
     : `<p>No diet suggestions</p>`;
 
   html += `</div>`;
@@ -172,11 +235,7 @@ function renderReport(data) {
   html += `<div class="card-section"><h3>🛡️ Precautions</h3>`;
 
   html += precautions.length
-    ? `<ul>${precautions.map(p => `
-        <li>
-          <strong>${p.step}</strong> - ${p.reason}
-        </li>
-      `).join("")}</ul>`
+    ? `<ul>${precautions.map(p => `<li>${p.step} - ${p.reason}</li>`).join("")}</ul>`
     : `<p>No precautions</p>`;
 
   html += `</div>`;

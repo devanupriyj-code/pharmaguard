@@ -1,8 +1,10 @@
 import pdfplumber
 import re
+import json
+import sys
 
 # ==============================
-# 📄 Extract values from PDF
+# 📄 Extract values + ranges from PDF
 # ==============================
 def extract_values_from_pdf(file_path):
     text = ""
@@ -13,30 +15,46 @@ def extract_values_from_pdf(file_path):
             if extracted:
                 text += extracted + "\n"
 
-    lines = text.lower().split("\n")
+    text = text.lower()
 
     data = {}
 
-    keywords = {
-        "hemoglobin": "hb",
-        "glucose": "glucose",
-        "cholesterol": "cholesterol",
-        "creatinine": "creatinine",
-        "vitamin d": "vitamin_d",
-        "wbc": "wbc",
-        "platelet": "platelets"
+    # 🔥 Strong patterns (real-world matching)
+    patterns = {
+        "glucose": r"(glucose|fasting blood glucose)[^\d]*(\d+\.?\d*)[^\d]*(\d+\.?\d*\s*-\s*\d+\.?\d*|<\s*\d+)?",
+        "cholesterol": r"(cholesterol|total cholesterol)[^\d]*(\d+\.?\d*)[^\d]*(<\s*\d+\.?\d*)?",
+        "creatinine": r"(creatinine)[^\d]*(\d+\.?\d*)[^\d]*(\d+\.?\d*\s*-\s*\d+\.?\d*)?",
+        "vitamin_d": r"(vitamin d)[^\d]*(\d+\.?\d*)[^\d]*(\d+\.?\d*\s*-\s*\d+\.?\d*)?",
+        "hb": r"(hemoglobin|hb)[^\d]*(\d+\.?\d*)[^\d]*(\d+\.?\d*\s*-\s*\d+\.?\d*)?",
+        "wbc": r"(wbc|white blood)[^\d]*(\d+\.?\d*)[^\d]*(\d+\.?\d*\s*-\s*\d+\.?\d*)?",
+        "platelets": r"(platelet)[^\d]*(\d+\.?\d*)[^\d]*(\d+\.?\d*\s*-\s*\d+\.?\d*)?"
     }
 
-    for line in lines:
-        for key in keywords:
-            if key in line:
-                match = re.search(r"\d+\.?\d*", line)
-                if match:
-                    data[keywords[key]] = float(match.group())
+    for key, pattern in patterns.items():
+        match = re.search(pattern, text)
+
+        if match:
+            value = float(match.group(2)) if match.group(2) else None
+            range_value = match.group(3).replace(" ", "") if match.group(3) else None
+
+            data[key] = {
+                "value": value,
+                "range": range_value
+            }
 
     return data
 
 
 # ==============================
-# 🧠 Basic rule-based analysis
+# 🚀 MAIN ENTRY (for Node.js)
 # ==============================
+if __name__ == "__main__":
+    try:
+        file_path = sys.argv[1]
+
+        result = extract_values_from_pdf(file_path)
+
+        print(json.dumps(result))
+
+    except Exception as e:
+        print(json.dumps({"error": str(e)}))

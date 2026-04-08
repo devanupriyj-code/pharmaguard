@@ -22,33 +22,6 @@ const client = new OpenAI({
 });
 
 // ==============================
-// 💊 FDA MEDICINE CHECK
-// ==============================
-async function isValidMedicine(med) {
-  try {
-    const res = await fetch(
-      `https://api.fda.gov/drug/label.json?search=openfda.generic_name:${med}&limit=1`
-    );
-    const data = await res.json();
-    return data.results && data.results.length > 0;
-  } catch (err) {
-    console.error("FDA API error:", err.message);
-    return false;
-  }
-}
-
-// ==============================
-// 🧬 ICD MAPPING
-// ==============================
-const icdMap = {
-  anemia: "D64.9",
-  diabetes: "E11",
-  hypertension: "I10",
-  obesity: "E66",
-  asthma: "J45"
-};
-
-// ==============================
 // 📁 FILE UPLOAD
 // ==============================
 const uploadDir = path.join(__dirname, "uploads");
@@ -69,68 +42,68 @@ function safeParseJSON(raw) {
 }
 
 // ==============================
-// 🔄 NORMALIZER (CRITICAL FIX)
+// 🔄 NORMALIZER
 // ==============================
 function normalizeAI(ai) {
   return {
-    conditions: (ai.conditions || []).map(c => ({
-      name: c.name || "",
-      reason: c.reason || c.description || "",
-    })),
-
-    risks: (ai.risks || []).map(r => ({
-      issue: r.issue || r.name || "",
-      reason: r.reason || r.description || "",
-    })),
-
-    interactions: (ai.interactions || []).map(i => ({
-      drugs: i.drugs || (i.name ? [i.name] : []),
-      severity: i.severity || "unknown",
-      advice: i.advice || i.description || "",
-    })),
-
-    diet: (ai.diet || []).map(d => ({
-      food: d.food || d.name || "",
-      benefit: d.benefit || d.description || "",
-    })),
-
-    precautions: (ai.precautions || []).map(p => ({
-      step: p.step || p.name || "",
-      reason: p.reason || p.description || "",
-    })),
+    conditions: ai.conditions || [],
+    risks: ai.risks || [],
+    interactions: ai.interactions || [],
+    diet: ai.diet || [],
+    precautions: ai.precautions || []
   };
 }
 
 // ==============================
-// 🤖 AI CALL WITH RETRY
+// 🧠 RANGE ENGINE
 // ==============================
-async function callAI(prompt, retries = 2) {
-  for (let i = 0; i <= retries; i++) {
-    try {
-      const response = await client.chat.completions.create({
-        model: "llama-3.1-8b-instant",
-        messages: [
-          { role: "system", content: "You are a strict medical AI." },
-          { role: "user", content: prompt }
-        ],
-        temperature: 0,
-        max_completion_tokens: 900
-      });
+function parseRange(rangeStr) {
+  if (!rangeStr) return {};
 
-      const raw = response.choices[0].message.content;
-      console.log("🧠 AI RAW RESPONSE:", raw);
-
-      const parsed = safeParseJSON(raw);
-      if (parsed) return parsed;
-
-    } catch (err) {
-      console.error("AI call error:", err.message);
-    }
-
-    console.log(`🔁 Retrying AI... (${i + 1})`);
+  if (rangeStr.includes("-")) {
+    const [min, max] = rangeStr.split("-").map(v => parseFloat(v));
+    return { min, max };
   }
 
-  return null;
+  if (rangeStr.includes("<")) {
+    return { max: parseFloat(rangeStr.replace("<", "")) };
+  }
+
+  if (rangeStr.includes(">")) {
+    return { min: parseFloat(rangeStr.replace(">", "")) };
+  }
+
+  return {};
+}
+
+function checkStatus(value, range) {
+  if (range.min !== undefined && value < range.min) return "low";
+  if (range.max !== undefined && value > range.max) return "high";
+  return "normal";
+}
+
+// ==============================
+// 🤖 AI CALL
+// ==============================
+async function callAI(prompt) {
+  try {
+    const response = await client.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [
+        { role: "system", content: "You are a helpful medical assistant." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.3,
+      max_completion_tokens: 900
+    });
+
+    const raw = response.choices[0].message.content;
+    return safeParseJSON(raw);
+
+  } catch (err) {
+    console.error("AI call error:", err.message);
+    return null;
+  }
 }
 
 // ==============================
@@ -139,26 +112,10 @@ async function callAI(prompt, retries = 2) {
 app.post("/analyze", upload.single("file"), async (req, res) => {
   console.log("📥 Request received");
 
-  const medicines = req.body.medicines || "";
-
-  const medsArray = medicines
-    .split(/[, ]+/)
-    .map(m => m.trim().toLowerCase())
-    .filter(Boolean);
-
-  const validMeds = [];
-  const invalidMeds = [];
-
-  for (let med of medsArray) {
-    const isValid = await isValidMedicine(med);
-    if (isValid) validMeds.push(med);
-    else invalidMeds.push(med);
-  }
-
   let values = {};
 
   // ==============================
-  // 🐍 PYTHON (OPTIONAL)
+  // 🐍 PYTHON CALL
   // ==============================
   if (req.file) {
     const filePath = req.file.path;
@@ -178,90 +135,107 @@ app.post("/analyze", upload.single("file"), async (req, res) => {
       pythonProcess.on("close", () => {
         try {
           const match = result.match(/\{[\s\S]*\}/);
+
           if (match) {
             const parsed = JSON.parse(match[0]);
-            values = parsed.values || {};
+
+            // ✅ FIX: correct extraction
+            values = parsed.values || parsed;
+
+            console.log("✅ Parsed Python output:", parsed);
           }
+
         } catch (err) {
           console.error("Python parse error:", err.message);
         }
+
         resolve();
       });
     });
   }
 
-  const compactData = Object.entries(values)
-    .map(([k, v]) => `${k}:${v}`)
-    .join(", ");
+  console.log("📊 Extracted values:", values);
 
   // ==============================
-  // ❌ NO INPUT
+  // 🧠 RULE ENGINE
   // ==============================
-  if (!compactData && validMeds.length === 0) {
-    return res.status(400).json({
-      error: "Provide report or medicines"
+  const results = [];
+  const conditions = [];
+  const risks = [];
+
+  for (const key in values) {
+    const item = values[key];
+
+    if (!item || item.value === undefined) continue;
+
+    const value = item.value;
+    const range = parseRange(item.range);
+    const status = checkStatus(value, range);
+
+    results.push({ key, value, status });
+
+    if (status === "high" || status === "low") {
+      conditions.push({
+        name: key,
+        reason: `${key} is ${status}`
+      });
+
+      risks.push({
+        issue: `${key} imbalance`,
+        reason: `${key} is ${status}`
+      });
+    }
+  }
+
+  if (conditions.length === 0) {
+    conditions.push({
+      name: "Healthy",
+      reason: "All values are normal"
     });
   }
 
   // ==============================
-  // 🧠 PROMPT
+  // 🤖 AI WITH CONTEXT (🔥 FIX)
   // ==============================
   const prompt = `
-You are a STRICT medical AI.
+You are a medical assistant.
 
-Patient Data: ${compactData || "none"}
-Medicines: ${validMeds.length ? validMeds.join(", ") : "none"}
+Here are patient lab results:
+${JSON.stringify(values)}
 
-RULES:
-- Return ONLY JSON
-- No text outside JSON
-- Max 3 conditions, 3 risks, 2 interactions
-- Keep each explanation under 12 words
+Generate:
 
-FORMAT:
+1. Diet recommendations
+2. Health precautions
+3. Drug interaction warnings
+
+Return ONLY JSON:
 {
-  "conditions": [],
-  "risks": [],
-  "interactions": [],
-  "diet": [],
-  "precautions": []
+  "diet": [{ "food": "", "benefit": "" }],
+  "precautions": [{ "step": "", "reason": "" }],
+  "interactions": [{ "drugs": [], "severity": "", "advice": "" }]
 }
 `;
 
-  // ==============================
-  // 🤖 CALL AI
-  // ==============================
   let aiData = await callAI(prompt);
 
   if (!aiData) {
-    aiData = {
-      conditions: [],
-      risks: [],
-      interactions: [],
-      diet: [],
-      precautions: [],
-      error: "AI failed after retries"
-    };
+    aiData = { diet: [], precautions: [], interactions: [] };
   }
 
-  // 🔥 NORMALIZE (KEY FIX)
   aiData = normalizeAI(aiData);
 
   // ==============================
-  // 🧬 ICD ENRICHMENT
-  // ==============================
-  aiData.conditions = aiData.conditions.map(c => ({
-    ...c,
-    code: icdMap[c.name?.toLowerCase()] || "N/A"
-  }));
-
-  // ==============================
-  // 🚀 RESPONSE
+  // 🚀 FINAL RESPONSE (🔥 FIXED KEYS)
   // ==============================
   res.json({
-    extractedData: values,
-    ai: aiData,
-    invalidMedicines: invalidMeds
+    extracted: values,   // ✅ FIXED (frontend expects this)
+    analyzed: results,
+    ai: {
+      ...aiData,
+      conditions,
+      risks
+    }
   });
 });
 
