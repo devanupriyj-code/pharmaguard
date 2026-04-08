@@ -4,6 +4,9 @@
 const fileInput = document.getElementById("reportFile");
 const resultPanel = document.getElementById("resultPanel");
 
+let medicines = [];
+let lastAIResponse = null; // 🔥 store backend response
+
 // ==============================
 // 📄 FILE NAME DISPLAY
 // ==============================
@@ -13,19 +16,15 @@ fileInput.addEventListener("change", () => {
 });
 
 // ==============================
-// 🧠 ANALYZE REPORT
+// 🧠 AUTO ANALYZE FUNCTION
 // ==============================
-document.getElementById("analyzeReportBtn").addEventListener("click", async () => {
+async function analyzeReport() {
   const file = fileInput.files[0];
-
-  if (!file) {
-    alert("Please upload a file first!");
-    return;
-  }
+  if (!file) return;
 
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("medicines", medicines.join(",")); // ✅ send medicines
+  formData.append("medicines", medicines.join(","));
 
   try {
     const res = await fetch("http://localhost:5000/analyze", {
@@ -33,28 +32,28 @@ document.getElementById("analyzeReportBtn").addEventListener("click", async () =
       body: formData
     });
 
-    if (!res.ok) throw new Error("Server error");
-
     const data = await res.json();
-    console.log("FULL RESPONSE:", data);
-
     resultPanel.classList.remove("hidden");
 
-    let extractedData = data.extracted || data.values || {};
+    let extractedData = data.extracted || {};
 
     if (Object.keys(extractedData).length > 0) {
       data.analyzed = processHealthData(extractedData);
-    } else {
-      data.analyzed = data.analyzed || [];
     }
 
+    lastAIResponse = data; // 🔥 store response
     renderReport(data);
+    updateRiskLevel(); // 🔥 FIX
 
   } catch (err) {
     console.error(err);
-    alert("Error analyzing report");
   }
-});
+}
+
+// ==============================
+// 🧠 BUTTON ANALYZE
+// ==============================
+document.getElementById("analyzeReportBtn").addEventListener("click", analyzeReport);
 
 // ==============================
 // 🧠 PROCESS HEALTH DATA
@@ -71,86 +70,114 @@ function processHealthData(extracted) {
     let status = "unknown";
 
     if (value != null && range) {
-
       if (range.includes("-")) {
         const [min, max] = range.split("-").map(Number);
         if (value < min) status = "low";
         else if (value > max) status = "high";
         else status = "normal";
       }
-
       else if (range.includes("<")) {
         const max = Number(range.replace("<", ""));
         status = value < max ? "normal" : "high";
       }
-
       else if (range.includes(">")) {
         const min = Number(range.replace(">", ""));
         status = value > min ? "normal" : "low";
       }
     }
 
-    result.push({
-      key,
-      value,
-      status
-    });
+    result.push({ key, value, status });
   }
 
   return result;
 }
 
 // ==============================
-// 🎨 REPORT UI RENDER
+// 🎨 INTERACTIVE REPORT UI
 // ==============================
 function renderReport(data) {
-
-  if (data.ai?.error) {
-    resultPanel.innerHTML = `
-      <div class="result-card" style="color:red; font-weight:600;">
-        ❌ ${data.ai.error}
-      </div>
-    `;
-    return;
-  }
-
-  const analyzed = data.analyzed || [];
   const ai = data.ai || {};
+  const analyzed = data.analyzed || [];
 
   const interactions = ai.interactions || [];
   const diet = ai.diet || [];
   const precautions = ai.precautions || [];
 
-  let html = `<div class="result-card">
-    <div class="result-header">
-      <i class="fas fa-brain"></i>
-      <h2>Health Report</h2>
-    </div>`;
+  let html = `<div class="result-card">`;
 
   // ==============================
   // 🧪 HEALTH VALUES
   // ==============================
-  html += `<div class="card-section"><h3>🧪 Health Values</h3><div class="grid">`;
+  html += `
+    <div>
+      <h3 onclick="toggleSection(this)">🧪 Health Values ▼</h3>
+      <div style="display:block;">
+  `;
 
-  if (analyzed.length === 0) {
-    html += `<p>No data extracted</p>`;
-  } else {
-    analyzed.forEach(item => {
+  analyzed.forEach(item => {
+    const color =
+      item.status === "high" ? "red" :
+      item.status === "low" ? "orange" : "green";
 
+    html += `
+      <p style="border-left:4px solid ${color}; padding-left:8px;">
+        <strong>${item.key}</strong>: ${item.value}
+        <span style="color:${color};">(${item.status})</span>
+      </p>
+    `;
+  });
+
+  html += `</div></div>`;
+
+  // ==============================
+  // 💊 DRUG INTERACTIONS
+  // ==============================
+  html += `
+    <div>
+      <h3 onclick="toggleSection(this)">💊 Drug Interactions ▼</h3>
+      <div style="display:block;">
+  `;
+
+  if (medicines.length === 0) {
+    html += `<p>No medicines provided</p>`;
+  } 
+
+  else if (interactions[0]?.severity === "Invalid") {
+    html += `
+      <div style="
+        background:#ffe6e6;
+        border-left:5px solid red;
+        padding:10px;
+        border-radius:6px;
+        color:red;
+        font-weight:bold;
+      ">
+        ⚠️ ${interactions[0].advice}
+      </div>
+    `;
+  }
+
+  else if (interactions.length === 0) {
+    html += `<p style="color:green;">No harmful interactions</p>`;
+  } 
+
+  else {
+    interactions.forEach((i, index) => {
       const color =
-        item.status === "normal" ? "green" :
-        item.status === "high" ? "red" :
-        item.status === "low" ? "orange" : "gray";
+        i.severity === "High" ? "red" :
+        i.severity === "Moderate" ? "orange" : "green";
 
       html += `
-        <div class="value-card">
-          <h4>${item.key.toUpperCase()}</h4>
-          <p>
-            ${item.value ?? "N/A"} 
-            <span style="color:${color}; font-weight:600;">
-              (${item.status})
-            </span>
-          </p>
+        <div onclick="toggleDetail(${index})"
+             style="cursor:pointer; margin:10px 0; padding:10px; border-radius:6px; background:#f9f9f9;">
+          
+          <div style="color:${color}; font-weight:bold;">
+            ${i.drugs.join(" + ")} → ${i.severity}
+          </div>
+
+          <div id="detail-${index}" style="display:none; margin-top:5px;">
+            ${i.advice}
+          </div>
         </div>
       `;
     });
@@ -159,79 +186,34 @@ function renderReport(data) {
   html += `</div></div>`;
 
   // ==============================
-  // ⚠️ CONDITIONS
-  // ==============================
-  html += `<div class="card-section"><h3>⚠️ Conditions</h3>`;
-
-  const abnormal = analyzed.filter(a => a.status === "high" || a.status === "low");
-
-  html += abnormal.length
-    ? abnormal.map(a => `
-        <span class="badge" style="background:#ffe6e6;">
-          <strong>${a.key.toUpperCase()}</strong> is ${a.status.toUpperCase()}
-        </span>
-      `).join(" ")
-    : `<p style="color:green;">Healthy ✅ All values are normal</p>`;
-
-  html += `</div>`;
-
-  // ==============================
-  // 🚨 RISKS
-  // ==============================
-  html += `<div class="card-section"><h3>🚨 Risks</h3>`;
-
-  html += abnormal.length
-    ? `<p style="color:red;">Potential health risks detected ⚠️</p>`
-    : `<p style="color:green;">No major risks ✅</p>`;
-
-  html += `</div>`;
-
-  // ==============================
-  // 💊 DRUG INTERACTIONS (FIXED)
-  // ==============================
-  html += `<div class="card-section"><h3>💊 Drug Interactions</h3>`;
-
-  if (medicines.length === 0) {
-    html += `<p style="color:gray;">No medicines provided</p>`;
-  } else if (interactions.length === 0) {
-    html += `<p style="color:green;">No harmful interactions detected ✅</p>`;
-  } else {
-    html += `<ul>`;
-    interactions.forEach(d => {
-      html += `
-        <li>
-          <strong>${(d.drugs || []).join(" + ")}</strong><br/>
-          🔥 ${d.severity}<br/>
-          <small>${d.advice}</small>
-        </li>
-      `;
-    });
-    html += `</ul>`;
-  }
-
-  html += `</div>`;
-
-  // ==============================
   // 🥗 DIET
   // ==============================
-  html += `<div class="card-section"><h3>🥗 Diet</h3>`;
+  html += `
+    <div>
+      <h3 onclick="toggleSection(this)">🥗 Diet ▼</h3>
+      <div style="display:none;">
+  `;
 
-  html += diet.length
-    ? `<ul>${diet.map(d => `<li>${d.food} - ${d.benefit}</li>`).join("")}</ul>`
-    : `<p>No diet suggestions</p>`;
+  diet.forEach(d => {
+    html += `<p>🍎 <b>${d.food}</b>: ${d.benefit}</p>`;
+  });
 
-  html += `</div>`;
+  html += `</div></div>`;
 
   // ==============================
   // 🛡️ PRECAUTIONS
   // ==============================
-  html += `<div class="card-section"><h3>🛡️ Precautions</h3>`;
+  html += `
+    <div>
+      <h3 onclick="toggleSection(this)">🛡️ Precautions ▼</h3>
+      <div style="display:none;">
+  `;
 
-  html += precautions.length
-    ? `<ul>${precautions.map(p => `<li>${p.step} - ${p.reason}</li>`).join("")}</ul>`
-    : `<p>No precautions</p>`;
+  precautions.forEach(p => {
+    html += `<p>⚠️ <b>${p.step}</b>: ${p.reason}</p>`;
+  });
 
-  html += `</div>`;
+  html += `</div></div>`;
 
   html += `</div>`;
 
@@ -239,22 +221,60 @@ function renderReport(data) {
 }
 
 // ==============================
-// 💊 MEDICINE INPUT LOGIC
+// 🔁 TOGGLE SECTION
 // ==============================
-let medicines = [];
+function toggleSection(el) {
+  const content = el.nextElementSibling;
+  content.style.display =
+    content.style.display === "none" ? "block" : "none";
+}
 
+// ==============================
+// 🔁 TOGGLE DETAIL
+// ==============================
+function toggleDetail(index) {
+  const el = document.getElementById(`detail-${index}`);
+  el.style.display =
+    el.style.display === "none" ? "block" : "none";
+}
+
+// ==============================
+// 💊 MEDICINE LOGIC
+// ==============================
+
+// ADD MEDICINE
 document.getElementById("addMedBtn").onclick = () => {
   const input = document.getElementById("medInput");
-  const med = input.value.trim();
+  const med = input.value.trim().toLowerCase();
 
   if (!med) return;
 
-  medicines.push(med.toLowerCase());
-  input.value = "";
+  if (!medicines.includes(med)) {
+    medicines.push(med);
+  }
 
+  input.value = "";
   renderMeds();
+  analyzeReport();
 };
 
+// QUICK PRESETS
+document.querySelectorAll(".preset-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const meds = btn.innerText.toLowerCase().split("+").map(m => m.trim());
+
+    meds.forEach(m => {
+      if (!medicines.includes(m)) {
+        medicines.push(m);
+      }
+    });
+
+    renderMeds();
+    analyzeReport();
+  });
+});
+
+// RENDER MEDS
 function renderMeds() {
   const container = document.getElementById("medTagsContainer");
   container.innerHTML = "";
@@ -268,10 +288,46 @@ function renderMeds() {
     tag.onclick = () => {
       medicines.splice(i, 1);
       renderMeds();
+      analyzeReport();
     };
 
     container.appendChild(tag);
   });
 
   document.getElementById("medCount").textContent = medicines.length;
+}
+
+// ==============================
+// 🔥 FIXED RISK LEVEL LOGIC
+// ==============================
+function updateRiskLevel() {
+  const risk = document.getElementById("riskLevel");
+
+  if (!lastAIResponse) return;
+
+  const interactions = lastAIResponse.ai?.interactions || [];
+
+  // 🔴 INVALID
+  if (interactions[0]?.severity === "Invalid") {
+    risk.textContent = "Invalid";
+    risk.style.color = "red";
+    return;
+  }
+
+  // 🟢 NORMAL
+  if (medicines.length === 0) {
+    risk.textContent = "-";
+  } 
+  else if (medicines.length === 1) {
+    risk.textContent = "Low";
+    risk.style.color = "green";
+  } 
+  else if (medicines.length === 2) {
+    risk.textContent = "Moderate";
+    risk.style.color = "orange";
+  } 
+  else {
+    risk.textContent = "High";
+    risk.style.color = "red";
+  }
 }

@@ -62,6 +62,32 @@ async function callAI(prompt) {
 }
 
 // ==============================
+// 🧪 FDA VALIDATION
+// ==============================
+async function validateMedicines(medicines) {
+  const valid = [];
+
+  for (let med of medicines) {
+    try {
+      const res = await fetch(
+        `https://api.fda.gov/drug/label.json?search=openfda.brand_name:${med}&limit=1`
+      );
+
+      const data = await res.json();
+
+      if (data.results && data.results.length > 0) {
+        valid.push(med);
+      }
+
+    } catch (err) {
+      console.log("FDA check failed:", med);
+    }
+  }
+
+  return valid;
+}
+
+// ==============================
 // 🚀 MAIN ROUTE
 // ==============================
 app.post("/analyze", upload.single("file"), async (req, res) => {
@@ -76,7 +102,7 @@ app.post("/analyze", upload.single("file"), async (req, res) => {
   console.log("💊 Medicines:", medicines);
 
   // ==============================
-  // 🐍 PYTHON (ONLY FOR PDF VALUES)
+  // 🐍 PYTHON (PDF)
   // ==============================
   if (req.file) {
     const filePath = req.file.path;
@@ -109,6 +135,13 @@ app.post("/analyze", upload.single("file"), async (req, res) => {
   }
 
   // ==============================
+  // 🧠 VALIDATE MEDICINES
+  // ==============================
+  const validMedicines = await validateMedicines(medicines);
+
+  console.log("✅ Valid Medicines:", validMedicines);
+
+  // ==============================
   // 🤖 AI → DIET + PRECAUTIONS
   // ==============================
   const healthPrompt = `
@@ -136,27 +169,28 @@ Return ONLY JSON:
   }
 
   // ==============================
-  // 💊 AI DRUG INTERACTIONS (FIXED)
+  // 💊 STRICT INTERACTION LOGIC
   // ==============================
   let interactions = [];
 
-  if (medicines.length > 0) {
+  // ❌ BLOCK if ANY invalid medicine
+  if (validMedicines.length !== medicines.length) {
+    interactions.push({
+      drugs: medicines,
+      severity: "Invalid",
+      advice: "One or more medicines are not recognized. Please check spelling."
+    });
+  }
+
+  // ✅ ONLY if ALL are valid
+  else if (validMedicines.length > 0) {
     const interactionData = await callAI(`
 You are a STRICT clinical drug interaction checker.
 
-Rules:
-- ALWAYS check interactions carefully
-- If ANY known interaction exists → include it
-- If unsure → mark as "Moderate"
-- NEVER ignore well-known interactions
-- Warfarin interactions are usually HIGH risk
-- Antibiotics can increase drug effects
-
 Medicines:
-${medicines.join(", ")}
+${validMedicines.join(", ")}
 
 Return ONLY JSON:
-
 {
   "interactions": [
     {
@@ -166,25 +200,9 @@ Return ONLY JSON:
     }
   ]
 }
-
-If no interaction:
-{
-  "interactions": []
-}
     `);
 
-    console.log("AI interaction response:", interactionData);
-
     interactions = interactionData?.interactions || [];
-  }
-
-  // ✅ Safety fallback
-  if (interactions.length === 0 && medicines.length > 1) {
-    interactions.push({
-      drugs: medicines,
-      severity: "Moderate",
-      advice: "No confirmed interaction found, but consult a doctor to be safe"
-    });
   }
 
   // ==============================
