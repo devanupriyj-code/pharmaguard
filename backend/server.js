@@ -1,5 +1,4 @@
 require("dotenv").config(); 
-
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
@@ -13,9 +12,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ==============================
-// 🔐 GROQ SETUP
-// ==============================
 const client = new OpenAI({
   apiKey: process.env.GROQ_API_KEY,
   baseURL: "https://api.groq.com/openai/v1"
@@ -39,47 +35,6 @@ function safeParseJSON(raw) {
   } catch {
     return null;
   }
-}
-
-// ==============================
-// 🔄 NORMALIZER
-// ==============================
-function normalizeAI(ai) {
-  return {
-    conditions: ai.conditions || [],
-    risks: ai.risks || [],
-    interactions: ai.interactions || [],
-    diet: ai.diet || [],
-    precautions: ai.precautions || []
-  };
-}
-
-// ==============================
-// 🧠 RANGE ENGINE
-// ==============================
-function parseRange(rangeStr) {
-  if (!rangeStr) return {};
-
-  if (rangeStr.includes("-")) {
-    const [min, max] = rangeStr.split("-").map(v => parseFloat(v));
-    return { min, max };
-  }
-
-  if (rangeStr.includes("<")) {
-    return { max: parseFloat(rangeStr.replace("<", "")) };
-  }
-
-  if (rangeStr.includes(">")) {
-    return { min: parseFloat(rangeStr.replace(">", "")) };
-  }
-
-  return {};
-}
-
-function checkStatus(value, range) {
-  if (range.min !== undefined && value < range.min) return "low";
-  if (range.max !== undefined && value > range.max) return "high";
-  return "normal";
 }
 
 // ==============================
@@ -114,8 +69,14 @@ app.post("/analyze", upload.single("file"), async (req, res) => {
 
   let values = {};
 
+  const medicines = req.body.medicines
+    ? req.body.medicines.split(",").filter(m => m.trim() !== "")
+    : [];
+
+  console.log("💊 Medicines:", medicines);
+
   // ==============================
-  // 🐍 PYTHON CALL
+  // 🐍 PYTHON (ONLY FOR PDF VALUES)
   // ==============================
   if (req.file) {
     const filePath = req.file.path;
@@ -135,69 +96,22 @@ app.post("/analyze", upload.single("file"), async (req, res) => {
       pythonProcess.on("close", () => {
         try {
           const match = result.match(/\{[\s\S]*\}/);
-
           if (match) {
             const parsed = JSON.parse(match[0]);
-
-            // ✅ FIX: correct extraction
             values = parsed.values || parsed;
-
-            console.log("✅ Parsed Python output:", parsed);
           }
-
         } catch (err) {
           console.error("Python parse error:", err.message);
         }
-
         resolve();
       });
     });
   }
 
-  console.log("📊 Extracted values:", values);
-
   // ==============================
-  // 🧠 RULE ENGINE
+  // 🤖 AI → DIET + PRECAUTIONS
   // ==============================
-  const results = [];
-  const conditions = [];
-  const risks = [];
-
-  for (const key in values) {
-    const item = values[key];
-
-    if (!item || item.value === undefined) continue;
-
-    const value = item.value;
-    const range = parseRange(item.range);
-    const status = checkStatus(value, range);
-
-    results.push({ key, value, status });
-
-    if (status === "high" || status === "low") {
-      conditions.push({
-        name: key,
-        reason: `${key} is ${status}`
-      });
-
-      risks.push({
-        issue: `${key} imbalance`,
-        reason: `${key} is ${status}`
-      });
-    }
-  }
-
-  if (conditions.length === 0) {
-    conditions.push({
-      name: "Healthy",
-      reason: "All values are normal"
-    });
-  }
-
-  // ==============================
-  // 🤖 AI WITH CONTEXT (🔥 FIX)
-  // ==============================
-  const prompt = `
+  const healthPrompt = `
 You are a medical assistant.
 
 Here are patient lab results:
@@ -207,34 +121,82 @@ Generate:
 
 1. Diet recommendations
 2. Health precautions
-3. Drug interaction warnings
 
 Return ONLY JSON:
 {
   "diet": [{ "food": "", "benefit": "" }],
-  "precautions": [{ "step": "", "reason": "" }],
-  "interactions": [{ "drugs": [], "severity": "", "advice": "" }]
+  "precautions": [{ "step": "", "reason": "" }]
 }
 `;
 
-  let aiData = await callAI(prompt);
+  let aiData = await callAI(healthPrompt);
 
   if (!aiData) {
-    aiData = { diet: [], precautions: [], interactions: [] };
+    aiData = { diet: [], precautions: [] };
   }
 
-  aiData = normalizeAI(aiData);
+  // ==============================
+  // 💊 AI DRUG INTERACTIONS (FIXED)
+  // ==============================
+  let interactions = [];
+
+  if (medicines.length > 0) {
+    const interactionData = await callAI(`
+You are a STRICT clinical drug interaction checker.
+
+Rules:
+- ALWAYS check interactions carefully
+- If ANY known interaction exists → include it
+- If unsure → mark as "Moderate"
+- NEVER ignore well-known interactions
+- Warfarin interactions are usually HIGH risk
+- Antibiotics can increase drug effects
+
+Medicines:
+${medicines.join(", ")}
+
+Return ONLY JSON:
+
+{
+  "interactions": [
+    {
+      "drugs": ["drug1", "drug2"],
+      "severity": "Low | Moderate | High | Severe",
+      "advice": "Short clinical explanation"
+    }
+  ]
+}
+
+If no interaction:
+{
+  "interactions": []
+}
+    `);
+
+    console.log("AI interaction response:", interactionData);
+
+    interactions = interactionData?.interactions || [];
+  }
+
+  // ✅ Safety fallback
+  if (interactions.length === 0 && medicines.length > 1) {
+    interactions.push({
+      drugs: medicines,
+      severity: "Moderate",
+      advice: "No confirmed interaction found, but consult a doctor to be safe"
+    });
+  }
 
   // ==============================
-  // 🚀 FINAL RESPONSE (🔥 FIXED KEYS)
+  // 🚀 FINAL RESPONSE
   // ==============================
   res.json({
-    extracted: values,   // ✅ FIXED (frontend expects this)
-    analyzed: results,
+    extracted: values,
+    analyzed: [],
     ai: {
-      ...aiData,
-      conditions,
-      risks
+      diet: aiData.diet || [],
+      precautions: aiData.precautions || [],
+      interactions
     }
   });
 });

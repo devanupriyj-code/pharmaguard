@@ -25,7 +25,7 @@ document.getElementById("analyzeReportBtn").addEventListener("click", async () =
 
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("medicines", medicines.join(","));
+  formData.append("medicines", medicines.join(",")); // ✅ send medicines
 
   try {
     const res = await fetch("http://localhost:5000/analyze", {
@@ -36,13 +36,10 @@ document.getElementById("analyzeReportBtn").addEventListener("click", async () =
     if (!res.ok) throw new Error("Server error");
 
     const data = await res.json();
-    console.log("FULL RESPONSE:", data); // 🔥 DEBUG
+    console.log("FULL RESPONSE:", data);
 
     resultPanel.classList.remove("hidden");
 
-    // ==============================
-    // 🔥 FIX: HANDLE BOTH CASES
-    // ==============================
     let extractedData = data.extracted || data.values || {};
 
     if (Object.keys(extractedData).length > 0) {
@@ -75,22 +72,18 @@ function processHealthData(extracted) {
 
     if (value != null && range) {
 
-      // RANGE: 70-99
       if (range.includes("-")) {
         const [min, max] = range.split("-").map(Number);
-
         if (value < min) status = "low";
         else if (value > max) status = "high";
         else status = "normal";
       }
 
-      // RANGE: <200
       else if (range.includes("<")) {
         const max = Number(range.replace("<", ""));
         status = value < max ? "normal" : "high";
       }
 
-      // RANGE: >30
       else if (range.includes(">")) {
         const min = Number(range.replace(">", ""));
         status = value > min ? "normal" : "low";
@@ -124,8 +117,6 @@ function renderReport(data) {
   const analyzed = data.analyzed || [];
   const ai = data.ai || {};
 
-  const conditions = ai.conditions || [];
-  const risks = ai.risks || [];
   const interactions = ai.interactions || [];
   const diet = ai.diet || [];
   const precautions = ai.precautions || [];
@@ -196,11 +187,13 @@ function renderReport(data) {
   html += `</div>`;
 
   // ==============================
-  // 💊 DRUG INTERACTIONS
+  // 💊 DRUG INTERACTIONS (FIXED)
   // ==============================
   html += `<div class="card-section"><h3>💊 Drug Interactions</h3>`;
 
-  if (interactions.length === 0) {
+  if (medicines.length === 0) {
+    html += `<p style="color:gray;">No medicines provided</p>`;
+  } else if (interactions.length === 0) {
     html += `<p style="color:green;">No harmful interactions detected ✅</p>`;
   } else {
     html += `<ul>`;
