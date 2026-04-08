@@ -220,6 +220,54 @@ Return ONLY JSON:
 });
 
 // ==============================
+// 💬 CHATBOT ROUTE (ADDED)
+// ==============================
+app.post("/chat", async (req, res) => {
+  try {
+    const { message, report } = req.body;
+
+    const response = await client.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [
+        {
+role: "system",
+content: `
+You are a medical assistant.
+
+- Give SHORT and PRECISE answers (2-4 lines max)
+- Do NOT give long explanations
+- Be clear and direct
+- Focus only on important points
+`
+        },
+        {
+          role: "user",
+          content: `
+Answer briefly.
+
+Report:
+${JSON.stringify(report)}
+
+User Question:
+${message}
+          `
+        }
+      ],
+      temperature: 0.5,
+      max_completion_tokens: 800
+    });
+
+    const reply = response.choices[0].message.content;
+
+    res.json({ reply });
+
+  } catch (err) {
+    console.error("Chat error:", err.message);
+    res.status(500).json({ error: "Chat failed" });
+  }
+});
+
+// ==============================
 // 🚀 START SERVER
 // ==============================
 app.listen(5000, () => {

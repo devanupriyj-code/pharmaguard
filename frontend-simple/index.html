@@ -15,7 +15,7 @@
 </head>
 
 <body>
-
+ 
 <!-- ============================= -->
 <!-- 🎨 CORNER ANIMATIONS -->
 <!-- ============================= -->
@@ -87,6 +87,20 @@
         </button>
       </div>
 
+      <!-- 🚀 DASHBOARD BUTTON -->
+      <div style="margin-top:10px; text-align:center;">
+        <button id="dashboardBtn" style="
+          padding:10px 16px;
+          border:none;
+          border-radius:8px;
+          background:#4CAF50;
+          color:white;
+          cursor:pointer;
+        ">
+          📊 Open Dashboard
+        </button>
+      </div>
+
     </div>
 
     <!-- ============================= -->
@@ -109,7 +123,6 @@
 
       <div id="medTagsContainer" class="med-tags"></div>
 
-      <!-- Presets -->
       <div class="presets">
         <p>Quick Presets</p>
         <div class="preset-buttons">
@@ -119,7 +132,6 @@
         </div>
       </div>
 
-      <!-- Stats -->
       <div class="stats-widget">
         <div class="stat-item">
           <div class="stat-number" id="medCount">0</div>
@@ -176,14 +188,100 @@
 
   </div>
 
-  <!-- ============================= -->
-  <!-- 📊 RESULT PANEL -->
-  <!-- ============================= -->
+  <!-- RESULT PANEL -->
   <div id="resultPanel" class="hidden"></div>
+
+  <!-- HISTORY -->
+  <div id="historySection" style="margin-top:20px;">
+    <div class="card-modern">
+      <div class="card-header">
+        <i class="fas fa-folder-open"></i>
+        <h3>Saved Reports</h3>
+        <span class="badge">History</span>
+      </div>
+      <div id="historyList" style="padding:10px;"></div>
+    </div>
+  </div>
 
 </div>
 
-<!-- JS -->
+<!-- ============================= -->
+<!-- 💬 CHATBOT (ONLY MODIFIED PART) -->
+<!-- ============================= -->
+<div id="chatbot" style="
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  width:320px;
+  height:420px;
+  background:#ffffff;
+  border-radius:16px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.2);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  z-index:999;
+  font-family:Inter;
+  resize:both;
+">
+
+  <div id="chatHeader" style="
+    background:#10a37f;
+    color:white;
+    padding:12px;
+    font-weight:bold;
+    cursor:move;
+  ">
+    🤖 Pharma AI
+  </div>
+
+  <div id="chatMessages" style="
+    flex:1;
+    padding:10px;
+    overflow-y:auto;
+    background:#f7f7f8;
+  "></div>
+
+  <div style="display:flex;border-top:1px solid #ddd;">
+    <input id="chatInput" placeholder="Ask anything..." style="
+      flex:1;
+      border:none;
+      padding:12px;
+      outline:none;
+    ">
+    <button onclick="sendMessage()" style="
+      background:#10a37f;
+      color:white;
+      border:none;
+      padding:12px;
+      cursor:pointer;
+    ">
+      ➤
+    </button>
+  </div>
+
+</div>
+
+<!-- FIREBASE -->
+<script type="module">
+  import { 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyD7kcTdpDGSuLBCmnaCoVaKylaPSt4ufG8",
+    authDomain: "pharmaguard-b77e1.firebaseapp.com",
+    projectId: "pharmaguard-b77e1"
+  };
+
+const app = initializeApp(firebaseConfig);
+
+
+window.db = getFirestore(app);
+
+</script>
+
 <script src="script.js"></script>
 
 </body>

@@ -1,0 +1,868 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PharmaGuard Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  :root {
+    --teal-deep:    #0d9488;
+    --teal-mid:     #14b8a6;
+    --teal-light:   #5eead4;
+    --mint:         #ccfbf1;
+    --green-vivid:  #22c55e;
+    --green-soft:   #bbf7d0;
+    --bg:           #f0fdfb;
+    --card-glass:   rgba(255,255,255,0.72);
+    --card-border:  rgba(20,184,166,0.18);
+    --shadow:       0 8px 40px rgba(13,148,136,0.10);
+    --text-dark:    #134e4a;
+    --text-mid:     #2d6a63;
+    --text-soft:    #5eaaa3;
+    --red-alert:    #fca5a5;
+    --red-text:     #991b1b;
+    --pill-bg:      linear-gradient(135deg, #14b8a6 0%, #22c55e 100%);
+    --radius-xl:    28px;
+    --radius-pill:  999px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ── ANIMATED BACKGROUND ── */
+  .bg-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  /* Cross/plus pattern like screenshot */
+  .bg-layer::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--teal-light) 1.5px, transparent 1.5px),
+      linear-gradient(90deg, var(--teal-light) 1.5px, transparent 1.5px);
+    background-size: 40px 40px;
+    opacity: 0.18;
+  }
+
+  /* Radial teal glow blobs */
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.22;
+    animation: blobFloat 8s ease-in-out infinite alternate;
+  }
+  .blob-1 { width: 500px; height: 500px; background: #14b8a6; top: -120px; left: -100px; animation-delay: 0s; }
+  .blob-2 { width: 400px; height: 400px; background: #22c55e; bottom: -80px; right: -80px; animation-delay: 3s; }
+  .blob-3 { width: 300px; height: 300px; background: #5eead4; top: 50%; left: 50%; animation-delay: 5s; }
+
+  @keyframes blobFloat {
+    from { transform: translate(0, 0) scale(1); }
+    to   { transform: translate(30px, 20px) scale(1.08); }
+  }
+
+  /* Floating pill decorations */
+  .pill-deco {
+    position: absolute;
+    border-radius: 999px;
+    opacity: 0.55;
+    animation: pillDrift linear infinite;
+  }
+  .pill-deco:nth-child(4)  { width: 54px; height: 24px; background: linear-gradient(90deg,#f87171,#fb923c); top: 8%; left: 6%; animation-duration: 14s; }
+  .pill-deco:nth-child(5)  { width: 38px; height: 16px; background: linear-gradient(90deg,#14b8a6,#22c55e); top: 20%; right: 8%; animation-duration: 18s; animation-delay: 4s; }
+  .pill-deco:nth-child(6)  { width: 44px; height: 20px; background: linear-gradient(90deg,#a78bfa,#818cf8); bottom: 30%; left: 3%; animation-duration: 16s; animation-delay: 2s; }
+  .pill-deco:nth-child(7)  { width: 30px; height: 14px; background: linear-gradient(90deg,#f472b6,#fb7185); bottom: 15%; right: 5%; animation-duration: 20s; animation-delay: 6s; }
+
+  @keyframes pillDrift {
+    0%   { transform: translateY(0) rotate(-10deg); }
+    50%  { transform: translateY(-18px) rotate(10deg); }
+    100% { transform: translateY(0) rotate(-10deg); }
+  }
+
+  /* ── LAYOUT ── */
+  .wrapper { position: relative; z-index: 1; }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 30px 48px 20px;
+    animation: fadeDown 0.7s ease both;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 14px; }
+
+  .logo-icon {
+    width: 46px; height: 46px;
+    background: var(--pill-bg);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 4px 18px rgba(20,184,166,0.35);
+  }
+
+  .header h2 {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--text-dark);
+    letter-spacing: -0.5px;
+  }
+
+  .header-badge {
+    background: linear-gradient(135deg,#14b8a620,#22c55e20);
+    border: 1px solid #14b8a640;
+    color: var(--teal-deep);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: var(--radius-pill);
+    letter-spacing: 0.3px;
+  }
+
+  .back-btn {
+    background: var(--pill-bg);
+    color: white;
+    border: none;
+    padding: 11px 24px;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    font-family: 'Sora', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 4px 16px rgba(20,184,166,0.35);
+    transition: all 0.22s ease;
+  }
+  .back-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(20,184,166,0.45); }
+
+  /* ── GRID ── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+    padding: 8px 48px 48px;
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--card-glass);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-radius: var(--radius-xl);
+    padding: 26px;
+    border: 1px solid var(--card-border);
+    box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.9);
+    transition: transform 0.28s cubic-bezier(.34,1.56,.64,1), box-shadow 0.28s ease;
+    animation: cardRise 0.6s ease both;
+  }
+  .card:hover {
+    transform: translateY(-7px) scale(1.012);
+    box-shadow: 0 20px 50px rgba(13,148,136,0.16), inset 0 1px 0 rgba(255,255,255,0.9);
+  }
+
+  /* staggered animation */
+  .card:nth-child(1) { animation-delay: 0.10s; }
+  .card:nth-child(2) { animation-delay: 0.18s; }
+  .card:nth-child(3) { animation-delay: 0.26s; }
+  .card:nth-child(4) { animation-delay: 0.34s; }
+  .card:nth-child(5) { animation-delay: 0.42s; }
+  .card:nth-child(6) { animation-delay: 0.50s; }
+  .card:nth-child(7) { animation-delay: 0.58s; }
+
+  @keyframes cardRise {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-18px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── CARD HEADING PILL ── */
+  .card-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: var(--radius-pill);
+    background: var(--pill-bg);
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    margin-bottom: 18px;
+    box-shadow: 0 3px 12px rgba(20,184,166,0.28);
+  }
+
+  /* ── HEALTH SCORE CARD ── */
+  .score-ring-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+  }
+
+  .score-ring {
+    position: relative;
+    width: 130px;
+    height: 130px;
+  }
+
+  .score-ring svg {
+    transform: rotate(-90deg);
+  }
+
+  .score-ring-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .score-number {
+    font-size: 34px;
+    font-weight: 800;
+    color: var(--text-dark);
+    line-height: 1;
+  }
+
+  .score-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-soft);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .score-status {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--green-vivid);
+    background: var(--green-soft);
+    padding: 4px 14px;
+    border-radius: var(--radius-pill);
+  }
+
+  /* ── LATEST REPORT ── */
+  .metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 0;
+    border-bottom: 1px solid rgba(20,184,166,0.08);
+  }
+  .metric:last-child { border-bottom: none; }
+
+  .metric-key {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-mid);
+    text-transform: capitalize;
+  }
+
+  .metric-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+  }
+  .metric-val.normal { background: #dcfce7; color: #166534; }
+  .metric-val.high   { background: #fee2e2; color: #991b1b; }
+
+  /* ── CHARTS ── */
+  canvas {
+    border-radius: 14px;
+    max-height: 175px;
+  }
+
+  /* ── ALERTS ── */
+  .alert {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 15px;
+    border-radius: 16px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .alert:last-child { margin-bottom: 0; }
+
+  .alert-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .alert.red  { background: #fef2f2; color: var(--red-text); border: 1px solid #fecaca; }
+  .alert.red .alert-dot { background: #ef4444; box-shadow: 0 0 0 3px #fecaca; }
+  .alert.green { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+  .alert.green .alert-dot { background: var(--green-vivid); box-shadow: 0 0 0 3px #bbf7d0; }
+
+  /* ── AI BOX ── */
+  .ai-box {
+    background: linear-gradient(135deg, #f0fdfa 0%, #ecfdf5 100%);
+    border: 1px solid rgba(20,184,166,0.2);
+    padding: 18px;
+    border-radius: 18px;
+    color: var(--text-dark);
+    font-size: 14px;
+    line-height: 1.65;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ai-box::before {
+    content: '✦';
+    position: absolute;
+    right: 14px;
+    top: 10px;
+    font-size: 28px;
+    color: #14b8a620;
+  }
+
+  .ai-avatar {
+    width: 36px; height: 36px;
+    background: var(--pill-bg);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 3px 12px rgba(20,184,166,0.3);
+  }
+
+  .ai-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--teal-mid);
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  /* ── SPAN-2 ── */
+  .span2 { grid-column: span 2; }
+
+  /* ── DIVIDER ── */
+  .divider-line {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--teal-light), transparent);
+    margin: 6px 0 16px;
+    opacity: 0.5;
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-layer">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+  <div class="pill-deco"></div>
+  <div class="pill-deco"></div>
+  <div class="pill-deco"></div>
+  <div class="pill-deco"></div>
+</div>
+
+<div class="wrapper">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-icon">🛡️</div>
+      <div>
+        <h2>PharmaGuard</h2>
+        <span class="header-badge">AI-Powered Health Dashboard</span>
+      </div>
+    </div>
+    <button class="back-btn" onclick="window.location.href='index.html'">← Back to Home</button>
+  </div>
+
+  <div class="grid">
+
+    <!-- Health Score -->
+    <div class="card">
+      <div class="card-title">🧠 Health Score</div>
+      <div class="score-ring-wrap">
+        <div class="score-ring">
+          <svg viewBox="0 0 130 130" width="130" height="130">
+            <circle cx="65" cy="65" r="55" fill="none" stroke="#ccfbf1" stroke-width="10"/>
+            <circle cx="65" cy="65" r="55" fill="none"
+              stroke="url(#scoreGrad)" stroke-width="10"
+              stroke-linecap="round"
+              id="scoreArc"
+              stroke-dasharray="345.6"
+              stroke-dashoffset="345.6"/>
+            <defs>
+              <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#14b8a6"/>
+                <stop offset="100%" stop-color="#22c55e"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="score-ring-text">
+            <div class="score-number" id="scoreNum">--</div>
+            <div class="score-label">/ 100</div>
+          </div>
+        </div>
+        <div class="score-status" id="scoreStatus">Calculating…</div>
+      </div>
+    </div>
+
+    <!-- Latest Report -->
+    <div class="card">
+      <div class="card-title">📋 Latest Report</div>
+      <div class="divider-line"></div>
+      <div id="latestValues"></div>
+    </div>
+
+    <!-- Glucose Trend -->
+    <div class="card">
+      <div class="card-title">🩸 Glucose Trend</div>
+      <canvas id="glucoseChart"></canvas>
+    </div>
+
+    <!-- Cholesterol -->
+    <div class="card">
+      <div class="card-title">💊 Cholesterol Trend</div>
+      <canvas id="cholChart"></canvas>
+    </div>
+
+    <!-- Hemoglobin -->
+    <div class="card">
+      <div class="card-title">🧬 Hemoglobin Trend</div>
+      <canvas id="hbChart"></canvas>
+    </div>
+
+    <!-- Alerts -->
+    <div class="card">
+      <div class="card-title">⚠️ Alerts</div>
+      <div id="alerts"></div>
+    </div>
+
+    <!-- AI Summary -->
+    <div class="card span2">
+      <div class="card-title">🤖 AI Health Summary</div>
+      <div class="ai-box">
+        <div class="ai-avatar">🤖</div>
+        <div class="ai-label">AI Analysis</div>
+        <div id="aiSummary">Loading health insights…</div>
+      </div>
+    </div>
+
+<!-- 🧪 HEALTH VALUES -->
+<div class="card">
+  <div class="card-title">🧪 Health Values</div>
+  <div id="healthValuesFull"></div>
+</div>
+
+<!-- 💊 DRUG INTERACTIONS -->
+<div class="card">
+  <div class="card-title">💊 Drug Interactions</div>
+  <div id="drugInteractions"></div>
+</div>
+
+<!-- 🥗 DIET -->
+<div class="card span2">
+  <div class="card-title">🥗 Diet</div>
+  <div id="dietBox"></div>
+</div>
+
+<!-- 🛡️ PRECAUTIONS -->
+<div class="card span2">
+  <div class="card-title">🛡️ Precautions</div>
+  <div id="precautionsBox"></div>
+</div>  
+</div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSy...",
+  authDomain: "pharmaguard-b77e1.firebaseapp.com",
+  projectId: "pharmaguard-b77e1",
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+async function loadDashboard() {
+
+
+
+const q = query(
+  collection(db, "reports"),
+  orderBy("date", "desc")
+);
+
+  const snapshot = await getDocs(q);
+  let reports = [];
+  snapshot.forEach(doc => reports.push(doc.data()));
+
+if (!reports.length) {
+  console.log("No reports found");
+  return;
+}
+
+  const latest = reports[0];
+  showFullHealthData(latest);
+showInteractions(latest);
+showDiet(latest);
+showPrecautions(latest);
+  showValues(latest);
+  showScore(latest);
+  if (reports.length > 1) {
+  showCharts(reports);
+} else {
+  document.getElementById("glucoseChart").parentElement.innerHTML =
+    "<p style='text-align:center;'>Upload more reports to see trends</p>";
+
+  document.getElementById("cholChart").parentElement.innerHTML =
+    "<p style='text-align:center;'>Upload more reports to see trends</p>";
+
+  document.getElementById("hbChart").parentElement.innerHTML =
+    "<p style='text-align:center;'>Upload more reports to see trends</p>";
+}
+  showAlerts(latest);
+  showAI(latest);
+}
+
+function demoData() {
+  return [
+    { date: "2026-04-09", values: { glucose: {value:118}, cholesterol: {value:195}, creatinine: {value:1.1}, hb: {value:13.8} } },
+    { date: "2026-03-10", values: { glucose: {value:132}, cholesterol: {value:210}, creatinine: {value:1.4}, hb: {value:13.1} } },
+    { date: "2026-02-09", values: { glucose: {value:125}, cholesterol: {value:202}, creatinine: {value:1.2}, hb: {value:14.0} } },
+    { date: "2026-01-08", values: { glucose: {value:108}, cholesterol: {value:185}, creatinine: {value:1.0}, hb: {value:14.5} } },
+  ];
+}
+
+function showValues(report) {
+  const container = document.getElementById("latestValues");
+  container.innerHTML = "";
+  for (let key in report.values) {
+    let value = report.values[key].value;
+    let isHigh = false;
+    if (key === "glucose" && value > 120) isHigh = true;
+    if (key === "cholesterol" && value > 200) isHigh = true;
+    if (key === "creatinine" && value > 1.3) isHigh = true;
+    container.innerHTML += `
+      <div class="metric">
+        <span class="metric-key">${key}</span>
+        <span class="metric-val ${isHigh ? 'high' : 'normal'}">${value}</span>
+      </div>`;
+  }
+}
+
+function showScore(report) {
+  let score = 100;
+  const v = report.values;
+  if (v.glucose?.value > 120)    score -= 20;
+  if (v.cholesterol?.value > 200) score -= 20;
+  if (v.creatinine?.value > 1.3)  score -= 20;
+
+  document.getElementById("scoreNum").textContent = score;
+  const status = score >= 80 ? "Excellent" : score >= 60 ? "Needs Attention" : "Serious Condition";
+  const statusEl = document.getElementById("scoreStatus");
+statusEl.textContent = status;
+
+// ✅ ADD COLOR LOGIC
+if (score >= 80) {
+  statusEl.style.background = "#bbf7d0"; // green
+  statusEl.style.color = "#166534";
+}
+else if (score >= 60) {
+  statusEl.style.background = "#fef3c7"; // yellow
+  statusEl.style.color = "#92400e";
+}
+else {
+  statusEl.style.background = "#fee2e2"; // 🔴 RED
+  statusEl.style.color = "#991b1b";
+}
+
+  // Animate arc
+  const arc = document.getElementById("scoreArc");
+  // ✅ CHANGE RING COLOR BASED ON SCORE
+if (score >= 80) {
+  arc.setAttribute("stroke", "#22c55e"); // green
+}
+else if (score >= 60) {
+  arc.setAttribute("stroke", "#f59e0b"); // yellow
+}
+else {
+  arc.setAttribute("stroke", "#ef4444"); // 🔴 red
+}   
+  const circum = 345.6;
+  const offset = circum - (score / 100) * circum;
+  arc.style.transition = "stroke-dashoffset 1.4s cubic-bezier(0.34,1.1,0.64,1)";
+  setTimeout(() => arc.style.strokeDashoffset = offset, 100);
+}
+
+function createChart(id, label, reports, key, color, safeMax) {
+  const labels = reports.map(r => new Date(r.date).toLocaleDateString('en-IN', {month:'short', day:'numeric'}));
+  const data = reports.map(r => r.values[key]?.value || 0);
+  const ctx = document.getElementById(id).getContext("2d");
+
+  const grad = ctx.createLinearGradient(0, 0, 0, 200);
+  grad.addColorStop(0, color + "55");
+  grad.addColorStop(1, color + "05");
+
+  new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label,
+          data,
+          fill: true,
+          backgroundColor: grad,
+          borderColor: color,
+          borderWidth: 2.5,
+          tension: 0.42,
+          pointBackgroundColor: "#fff",
+          pointBorderColor: color,
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7
+        },
+        {
+          label: "Safe Limit",
+          data: Array(data.length).fill(safeMax),
+          borderColor: "#f87171",
+          borderDash: [5, 5],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "rgba(15,118,110,0.92)",
+          titleColor: "#ccfbf1",
+          bodyColor: "#fff",
+          borderColor: "#14b8a6",
+          borderWidth: 1,
+          callbacks: {
+            label: ctx => ctx.raw > safeMax
+              ? `${ctx.raw} — ⚠️ High`
+              : `${ctx.raw} — ✅ Normal`
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: "rgba(20,184,166,0.07)" }, ticks: { color: "#5eaaa3", font: { size: 11 } } },
+        y: { grid: { color: "rgba(20,184,166,0.07)" }, ticks: { color: "#5eaaa3", font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+function showCharts(reports) {
+  createChart("glucoseChart",  "Glucose",      reports, "glucose",     "#10b981", 120);
+  createChart("cholChart",     "Cholesterol",  reports, "cholesterol", "#f59e0b", 200);
+  createChart("hbChart",       "Hemoglobin",   reports, "hb",          "#6366f1", 15);
+}
+
+function showAlerts(report) {
+  const v = report.values;
+  let html = "";
+  if (v.glucose?.value > 130)
+    html += `<div class="alert red"><div class="alert-dot"></div>High glucose level detected — consider reducing sugar intake</div>`;
+  if (v.creatinine?.value > 1.3)
+    html += `<div class="alert red"><div class="alert-dot"></div>Elevated creatinine — kidney function needs monitoring</div>`;
+  if (v.cholesterol?.value > 200)
+    html += `<div class="alert red"><div class="alert-dot"></div>Cholesterol above safe limit — review dietary habits</div>`;
+  document.getElementById("alerts").innerHTML =
+    html || `<div class="alert green"><div class="alert-dot"></div>All parameters within normal range — you're doing great!</div>`;
+}
+function showFullHealthData(report) {
+  const values = report.values || {};
+  let html = "";
+
+  for (let key in values) {
+    const v = values[key].value;
+    html += `<p><b>${key}</b>: ${v}</p>`;
+  }
+
+  document.getElementById("healthValuesFull").innerHTML = html;
+}
+
+function showInteractions(report) {
+  const interactions = report.interactions || [];
+
+  if (!interactions.length) {
+    document.getElementById("drugInteractions").innerHTML =
+      "<p>No medicines provided</p>";
+    return;
+  }
+
+  let html = "";
+  interactions.forEach(i => {
+    html += `<p>${i.drugs.join(" + ")} → ${i.severity}</p>`;
+  });
+
+  document.getElementById("drugInteractions").innerHTML = html;
+}
+
+function showDiet(report) {
+  const diet = report.diet || [];
+
+  let html = "";
+  diet.forEach(d => {
+    html += `<p>🍎 ${d.food} - ${d.benefit}</p>`;
+  });
+
+  document.getElementById("dietBox").innerHTML = html;
+}
+
+function showPrecautions(report) {
+  const precautions = report.precautions || [];
+
+  let html = "";
+  precautions.forEach(p => {
+    html += `<p>⚠️ ${p.step} - ${p.reason}</p>`;
+  });
+
+  document.getElementById("precautionsBox").innerHTML = html;
+}
+function showAI(report) {
+  const v = report.values;
+  let msgs = [];
+  if (v.glucose?.value <= 120 && v.cholesterol?.value <= 200 && v.creatinine?.value <= 1.3) {
+    msgs.push("Your health metrics are all within the safe range. Keep maintaining your current lifestyle, diet, and medication routine.");
+  } else {
+    if (v.glucose?.value > 120)    msgs.push("Your blood glucose is elevated. Consider reducing refined sugars and consult your physician about medication adjustment.");
+    if (v.cholesterol?.value > 200) msgs.push("Cholesterol is above the safe limit. A low-fat diet with regular exercise can help bring it down.");
+    if (v.creatinine?.value > 1.3)  msgs.push("Creatinine levels suggest kidney function may need attention. Increase water intake and schedule a follow-up.");
+  }
+  document.getElementById("aiSummary").textContent = msgs.join(" ");
+}
+
+loadDashboard();
+</script>
+<!-- ✅ ADD CHATBOT HERE -->
+<div id="chatbot" style="
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  width:320px;
+  height:420px;
+  background:#ffffff;
+  border-radius:16px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.2);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  z-index:999;
+  font-family:Inter;
+  resize:both;
+">
+
+  <div id="chatHeader" style="
+    background:#10a37f;
+    color:white;
+    padding:12px;
+    font-weight:bold;
+    cursor:move;
+  ">
+    🤖 Pharma AI
+  </div>
+
+  <div id="chatMessages" style="
+    flex:1;
+    padding:10px;
+    overflow-y:auto;
+    background:#f7f7f8;
+  "></div>
+
+  <div style="display:flex;border-top:1px solid #ddd;">
+    <input id="chatInput" placeholder="Ask anything..." style="
+      flex:1;
+      border:none;
+      padding:12px;
+      outline:none;
+    ">
+    <button onclick="sendMessage()" style="
+      background:#10a37f;
+      color:white;
+      border:none;
+      padding:12px;
+      cursor:pointer;
+    ">
+      ➤
+    </button>
+  </div>
+
+</div>
+
+<!-- ⚠️ IMPORTANT -->
+<script src="script.js"></script>
+<script>
+window.onload = function () {
+
+  const chatbot = document.getElementById("chatbot");
+  const header = document.getElementById("chatHeader");
+
+  if (!chatbot || !header) {
+    console.log("chatbot not found");
+    return;
+  }
+
+  let isDragging = false;
+  let offsetX = 0;
+  let offsetY = 0;
+
+  header.onmousedown = function (e) {
+    isDragging = true;
+
+    offsetX = e.clientX - chatbot.getBoundingClientRect().left;
+    offsetY = e.clientY - chatbot.getBoundingClientRect().top;
+
+    document.body.style.userSelect = "none";
+  };
+
+  document.onmousemove = function (e) {
+    if (!isDragging) return;
+
+    chatbot.style.left = (e.clientX - offsetX) + "px";
+    chatbot.style.top = (e.clientY - offsetY) + "px";
+
+    chatbot.style.bottom = "auto";
+    chatbot.style.right = "auto";
+  };
+
+  document.onmouseup = function () {
+    isDragging = false;
+    document.body.style.userSelect = "auto";
+  };
+
+};
+</script>
+
+</body>
+</html>
