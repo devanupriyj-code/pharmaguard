@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("dotenv").config(); 
 
 const express = require("express");
 const cors = require("cors");
@@ -29,9 +29,7 @@ async function isValidMedicine(med) {
     const res = await fetch(
       `https://api.fda.gov/drug/label.json?search=openfda.generic_name:${med}&limit=1`
     );
-
     const data = await res.json();
-
     return data.results && data.results.length > 0;
   } catch (err) {
     console.error("FDA API error:", err.message);
@@ -40,229 +38,230 @@ async function isValidMedicine(med) {
 }
 
 // ==============================
-// 📁 FILE UPLOAD SETUP
+// 🧬 ICD MAPPING
+// ==============================
+const icdMap = {
+  anemia: "D64.9",
+  diabetes: "E11",
+  hypertension: "I10",
+  obesity: "E66",
+  asthma: "J45"
+};
+
+// ==============================
+// 📁 FILE UPLOAD
 // ==============================
 const uploadDir = path.join(__dirname, "uploads");
-
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-}
-
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
 const upload = multer({ dest: uploadDir });
 
 // ==============================
-// 🚀 MAIN ANALYZE ROUTE
+// 🛠 SAFE JSON PARSER
+// ==============================
+function safeParseJSON(raw) {
+  try {
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error("No JSON found");
+    return JSON.parse(match[0]);
+  } catch {
+    return null;
+  }
+}
+
+// ==============================
+// 🔄 NORMALIZER (CRITICAL FIX)
+// ==============================
+function normalizeAI(ai) {
+  return {
+    conditions: (ai.conditions || []).map(c => ({
+      name: c.name || "",
+      reason: c.reason || c.description || "",
+    })),
+
+    risks: (ai.risks || []).map(r => ({
+      issue: r.issue || r.name || "",
+      reason: r.reason || r.description || "",
+    })),
+
+    interactions: (ai.interactions || []).map(i => ({
+      drugs: i.drugs || (i.name ? [i.name] : []),
+      severity: i.severity || "unknown",
+      advice: i.advice || i.description || "",
+    })),
+
+    diet: (ai.diet || []).map(d => ({
+      food: d.food || d.name || "",
+      benefit: d.benefit || d.description || "",
+    })),
+
+    precautions: (ai.precautions || []).map(p => ({
+      step: p.step || p.name || "",
+      reason: p.reason || p.description || "",
+    })),
+  };
+}
+
+// ==============================
+// 🤖 AI CALL WITH RETRY
+// ==============================
+async function callAI(prompt, retries = 2) {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const response = await client.chat.completions.create({
+        model: "llama-3.1-8b-instant",
+        messages: [
+          { role: "system", content: "You are a strict medical AI." },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0,
+        max_completion_tokens: 900
+      });
+
+      const raw = response.choices[0].message.content;
+      console.log("🧠 AI RAW RESPONSE:", raw);
+
+      const parsed = safeParseJSON(raw);
+      if (parsed) return parsed;
+
+    } catch (err) {
+      console.error("AI call error:", err.message);
+    }
+
+    console.log(`🔁 Retrying AI... (${i + 1})`);
+  }
+
+  return null;
+}
+
+// ==============================
+// 🚀 MAIN ROUTE
 // ==============================
 app.post("/analyze", upload.single("file"), async (req, res) => {
   console.log("📥 Request received");
 
-  // ✅ File check
-  if (!req.file) {
-    return res.status(400).json({ error: "No file uploaded" });
-  }
-
-  const filePath = req.file.path;
   const medicines = req.body.medicines || "";
 
-  // ==============================
-  // 💊 MEDICINE INPUT PROCESSING
-  // ==============================
   const medsArray = medicines
-    ? medicines
-        .split(/[, ]+/)
-        .map(m => m.trim().toLowerCase())
-        .filter(Boolean)
-    : [];
+    .split(/[, ]+/)
+    .map(m => m.trim().toLowerCase())
+    .filter(Boolean);
 
-  console.log("💊 Medicines:", medsArray);
-
-  // ==============================
-  // 🧠 FDA VALIDATION
-  // ==============================
   const validMeds = [];
   const invalidMeds = [];
 
   for (let med of medsArray) {
     const isValid = await isValidMedicine(med);
-
-    if (isValid) {
-      validMeds.push(med);
-    } else {
-      invalidMeds.push(med);
-    }
+    if (isValid) validMeds.push(med);
+    else invalidMeds.push(med);
   }
 
-  console.log("✅ Valid:", validMeds);
-  console.log("❌ Invalid:", invalidMeds);
+  let values = {};
 
   // ==============================
-  // 🐍 RUN PYTHON
+  // 🐍 PYTHON (OPTIONAL)
   // ==============================
-  const pythonProcess = spawn("python", [
-    path.join(__dirname, "../ai-model/main.py"),
-    filePath
-  ]);
+  if (req.file) {
+    const filePath = req.file.path;
 
-  let result = "";
+    const pythonProcess = spawn("python", [
+      path.join(__dirname, "../ai-model/main.py"),
+      filePath
+    ]);
 
-  pythonProcess.stdout.on("data", (data) => {
-    result += data.toString();
-  });
+    let result = "";
 
-  pythonProcess.stderr.on("data", (data) => {
-    console.error("❌ Python Error:", data.toString());
-  });
+    pythonProcess.stdout.on("data", (data) => {
+      result += data.toString();
+    });
 
-  pythonProcess.on("close", async () => {
-    console.log("✅ Python finished");
-    console.log("🐍 RAW PYTHON OUTPUT:", result);
-
-    try {
-      if (!result || result.trim() === "") {
-        throw new Error("Python returned empty result");
-      }
-
-      // ==============================
-      // ✅ SAFE JSON PARSE (PYTHON)
-      // ==============================
-      let parsed;
-      try {
-        const jsonMatch = result.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("Invalid Python output");
-
-        parsed = JSON.parse(jsonMatch[0]);
-      } catch {
-        throw new Error("Python JSON parse failed");
-      }
-
-      const values = parsed.values || {};
-
-      // ==============================
-      // 🚫 BLOCK INVALID MEDICINES
-      // ==============================
-      if (validMeds.length === 0) {
-        return res.json({
-          extractedData: values,
-          ai: {
-            error: `Medicine not recognized: ${invalidMeds.join(", ")}`,
-            conditions: [],
-            risks: [],
-            drug_interactions: [],
-            side_effects: [],
-            food_warnings: [],
-            diet: [],
-            precautions: []
+    await new Promise((resolve) => {
+      pythonProcess.on("close", () => {
+        try {
+          const match = result.match(/\{[\s\S]*\}/);
+          if (match) {
+            const parsed = JSON.parse(match[0]);
+            values = parsed.values || {};
           }
-        });
-      }
+        } catch (err) {
+          console.error("Python parse error:", err.message);
+        }
+        resolve();
+      });
+    });
+  }
 
-      // ==============================
-      // ⚠️ PARTIAL INVALID WARNING
-      // ==============================
-      if (invalidMeds.length > 0) {
-        console.log("⚠️ Ignoring invalid medicines:", invalidMeds);
-      }
+  const compactData = Object.entries(values)
+    .map(([k, v]) => `${k}:${v}`)
+    .join(", ");
 
-      // ==============================
-      // ⚡ COMPACT DATA
-      // ==============================
-      const compactData = Object.entries(values)
-        .map(([k, v]) => `${k}:${v}`)
-        .join(", ");
+  // ==============================
+  // ❌ NO INPUT
+  // ==============================
+  if (!compactData && validMeds.length === 0) {
+    return res.status(400).json({
+      error: "Provide report or medicines"
+    });
+  }
 
-      const safeData = compactData || "no data";
+  // ==============================
+  // 🧠 PROMPT
+  // ==============================
+  const prompt = `
+You are a STRICT medical AI.
 
-      // ==============================
-      // 🧠 AI PROMPT
-      // ==============================
-      const prompt = `
-You are a STRICT medical safety AI.
+Patient Data: ${compactData || "none"}
+Medicines: ${validMeds.length ? validMeds.join(", ") : "none"}
 
-Patient Data: ${safeData}
+RULES:
+- Return ONLY JSON
+- No text outside JSON
+- Max 3 conditions, 3 risks, 2 interactions
+- Keep each explanation under 12 words
 
-Medicines: ${validMeds.join(", ") || "none"}
-
-TASK:
-1. Analyze each medicine
-2. Compare every pair of medicines
-3. Identify known drug interactions
-
-Return ONLY JSON:
+FORMAT:
 {
   "conditions": [],
   "risks": [],
-  "drug_interactions": [
-    {
-      "drugs": [],
-      "severity": "",
-      "effect": "",
-      "advice": ""
-    }
-  ],
-  "side_effects": [],
-  "food_warnings": [],
+  "interactions": [],
   "diet": [],
   "precautions": []
 }
-
-STRICT RULES:
-- Only analyze REAL known medicines
-- Do NOT hallucinate interactions
-- Return [] if no valid interaction found
-- Severity must be LOW / MODERATE / HIGH
-- No explanation outside JSON
 `;
 
-      // ==============================
-      // 🤖 AI CALL
-      // ==============================
-      const response = await client.chat.completions.create({
-        model: "llama-3.1-8b-instant",
-        messages: [
-          { role: "system", content: "You are a strict medical safety AI." },
-          { role: "user", content: prompt }
-        ],
-        temperature: 0.2,
-        max_completion_tokens: 300
-      });
+  // ==============================
+  // 🤖 CALL AI
+  // ==============================
+  let aiData = await callAI(prompt);
 
-      const aiText = response.choices[0].message.content;
+  if (!aiData) {
+    aiData = {
+      conditions: [],
+      risks: [],
+      interactions: [],
+      diet: [],
+      precautions: [],
+      error: "AI failed after retries"
+    };
+  }
 
-      console.log("🧠 AI RAW:", aiText);
+  // 🔥 NORMALIZE (KEY FIX)
+  aiData = normalizeAI(aiData);
 
-      // ==============================
-      // ✅ SAFE JSON PARSE (AI)
-      // ==============================
-      let aiData;
+  // ==============================
+  // 🧬 ICD ENRICHMENT
+  // ==============================
+  aiData.conditions = aiData.conditions.map(c => ({
+    ...c,
+    code: icdMap[c.name?.toLowerCase()] || "N/A"
+  }));
 
-      try {
-        const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("Invalid AI output");
-
-        aiData = JSON.parse(jsonMatch[0]);
-      } catch {
-        aiData = {
-          error: "Invalid JSON from AI",
-          raw: aiText
-        };
-      }
-
-      // ==============================
-      // 📤 RESPONSE
-      // ==============================
-      res.json({
-        extractedData: values,
-        ai: aiData
-      });
-
-    } catch (err) {
-      console.error("❌ Server Error:", err.message);
-
-      res.status(500).json({
-        error: "Processing failed",
-        details: err.message
-      });
-    }
+  // ==============================
+  // 🚀 RESPONSE
+  // ==============================
+  res.json({
+    extractedData: values,
+    ai: aiData,
+    invalidMedicines: invalidMeds
   });
 });
 

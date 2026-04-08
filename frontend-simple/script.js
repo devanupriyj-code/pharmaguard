@@ -5,7 +5,7 @@ const fileInput = document.getElementById("reportFile");
 const resultPanel = document.getElementById("resultPanel");
 
 // ==============================
-// 📄 FILE NAME DISPLAY (NEW FIX)
+// 📄 FILE NAME DISPLAY
 // ==============================
 fileInput.addEventListener("change", () => {
   const fileName = fileInput.files[0]?.name || "No file selected";
@@ -47,13 +47,10 @@ document.getElementById("analyzeReportBtn").addEventListener("click", async () =
 });
 
 // ==============================
-// 🎨 REPORT UI RENDER
+// 🎨 REPORT UI RENDER (FINAL)
 // ==============================
 function renderReport(data) {
 
-  // ==============================
-  // ❌ HANDLE INVALID MEDICINE ERROR (NEW FIX)
-  // ==============================
   if (data.ai?.error) {
     resultPanel.innerHTML = `
       <div class="result-card" style="color:red; font-weight:600;">
@@ -63,25 +60,23 @@ function renderReport(data) {
     return;
   }
 
-  const values = data.extractedData?.values || data.extractedData || {};
+  const values = data.extractedData || {};
   const ai = data.ai || {};
 
   const conditions = ai.conditions || [];
   const risks = ai.risks || [];
+  const interactions = ai.interactions || [];
   const diet = ai.diet || [];
   const precautions = ai.precautions || [];
 
-  const drugInteractions = ai.drug_interactions || [];
-  const sideEffects = ai.side_effects || [];
-  const foodWarnings = ai.food_warnings || [];
-
-  let html = `<div class="result-card"><div class="result-header">
-                <i class="fas fa-brain"></i>
-                <h2>Health Report</h2>
-              </div>`;
+  let html = `<div class="result-card">
+    <div class="result-header">
+      <i class="fas fa-brain"></i>
+      <h2>Health Report</h2>
+    </div>`;
 
   // ==============================
-  // 🧪 VALUES
+  // 🧪 HEALTH VALUES
   // ==============================
   html += `<div class="card-section"><h3>🧪 Health Values</h3><div class="grid">`;
 
@@ -104,18 +99,32 @@ function renderReport(data) {
   // ⚠️ CONDITIONS
   // ==============================
   html += `<div class="card-section"><h3>⚠️ Conditions</h3>`;
+
   html += conditions.length
-    ? conditions.map(c => `<span class="badge">${c}</span>`).join(" ")
+    ? conditions.map(c => `
+        <span class="badge">
+          <strong>${c.name}</strong> (${c.code})<br/>
+          <small>${c.reason}</small>
+        </span>
+      `).join(" ")
     : `<p>No major issues detected ✅</p>`;
+
   html += `</div>`;
 
   // ==============================
   // 🚨 RISKS
   // ==============================
   html += `<div class="card-section"><h3>🚨 Risks</h3>`;
+
   html += risks.length
-    ? `<ul>${risks.map(r => `<li>${typeof r === "object" ? r.message || JSON.stringify(r) : r}</li>`).join("")}</ul>`
+    ? `<ul>${risks.map(r => `
+        <li>
+          <strong>${r.issue}</strong><br/>
+          <small>${r.reason}</small>
+        </li>
+      `).join("")}</ul>`
     : `<p>No major risks</p>`;
+
   html += `</div>`;
 
   // ==============================
@@ -123,17 +132,17 @@ function renderReport(data) {
   // ==============================
   html += `<div class="card-section"><h3>💊 Drug Interactions</h3>`;
 
-  if (drugInteractions.length === 0) {
+  if (interactions.length === 0) {
     html += `<p style="color:green">No harmful interactions detected ✅</p>`;
   } else {
     html += `<ul>`;
-    drugInteractions.forEach(d => {
+    interactions.forEach(d => {
       html += `
-        <li style="color:red; margin-bottom:10px;">
-          <strong>${(d.drugs || []).join(" + ")}</strong><br/>
-          ⚠️ Effect: ${d.effect || "Unknown"}<br/>
-          🔥 Severity: <b>${d.severity || "Unknown"}</b><br/>
-          💡 Advice: ${d.advice || "Consult doctor"}
+        <li style="margin-bottom:10px;">
+          <strong>${d.drugs.join(" + ")}</strong><br/>
+          🔥 Severity: <b>${d.severity}</b><br/>
+          💡 Advice:<br/>
+          <small>${d.advice}</small>
         </li>
       `;
     });
@@ -143,39 +152,33 @@ function renderReport(data) {
   html += `</div>`;
 
   // ==============================
-  // 💥 SIDE EFFECTS
-  // ==============================
-  html += `<div class="card-section"><h3>💥 Side Effects</h3>`;
-  html += sideEffects.length
-    ? `<ul>${sideEffects.map(s => `<li>${s}</li>`).join("")}</ul>`
-    : `<p>No major side effects</p>`;
-  html += `</div>`;
-
-  // ==============================
-  // 🍽️ FOOD WARNINGS
-  // ==============================
-  html += `<div class="card-section"><h3>🍽️ Food Warnings</h3>`;
-  html += foodWarnings.length
-    ? `<ul>${foodWarnings.map(f => `<li>${f}</li>`).join("")}</ul>`
-    : `<p>No food restrictions</p>`;
-  html += `</div>`;
-
-  // ==============================
   // 🥗 DIET
   // ==============================
   html += `<div class="card-section"><h3>🥗 Diet</h3>`;
+
   html += diet.length
-    ? `<ul>${diet.map(d => `<li>${d}</li>`).join("")}</ul>`
-    : `<p>No suggestions</p>`;
+    ? `<ul>${diet.map(d => `
+        <li>
+          <strong>${d.food}</strong> - ${d.benefit}
+        </li>
+      `).join("")}</ul>`
+    : `<p>No diet suggestions</p>`;
+
   html += `</div>`;
 
   // ==============================
   // 🛡️ PRECAUTIONS
   // ==============================
   html += `<div class="card-section"><h3>🛡️ Precautions</h3>`;
+
   html += precautions.length
-    ? `<ul>${precautions.map(p => `<li>${p}</li>`).join("")}</ul>`
+    ? `<ul>${precautions.map(p => `
+        <li>
+          <strong>${p.step}</strong> - ${p.reason}
+        </li>
+      `).join("")}</ul>`
     : `<p>No precautions</p>`;
+
   html += `</div>`;
 
   html += `</div>`;
