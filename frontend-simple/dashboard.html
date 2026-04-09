@@ -524,6 +524,7 @@ async function loadDashboard() {
 
   let reports = [];
   snapshot.forEach(doc => reports.push(doc.data()));
+  reports.reverse();  // 🔥 FIX ORDER
 
   console.log("Reports:", reports); // 🔥 DEBUG
 
@@ -532,7 +533,7 @@ async function loadDashboard() {
     return;
   }
 
-  const latest = reports[0];
+  const latest = reports[reports.length - 1];
 
   showFullHealthData(latest);
   showInteractions(latest);
