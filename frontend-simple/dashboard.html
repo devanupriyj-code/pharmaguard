@@ -784,11 +784,10 @@ loadDashboard();
   background:#ffffff;
   border-radius:16px;
   box-shadow:0 10px 30px rgba(0,0,0,0.2);
-  display:flex;
+  display:none;   /* ✅ hidden initially */
   flex-direction:column;
   overflow:hidden;
   z-index:999;
-  font-family:Inter;
   resize:both;
 ">
 
@@ -830,6 +829,31 @@ loadDashboard();
 </div>
 
 <!-- ⚠️ IMPORTANT -->
+ <script>
+window.addEventListener("load", () => {
+  const btn = document.getElementById("chatToggleBtn");
+  const chatbot = document.getElementById("chatbot");
+
+  if (!btn || !chatbot) {
+    console.log("chat toggle not found");
+    return;
+  }
+
+  let isOpen = false;
+
+  btn.onclick = () => {
+    isOpen = !isOpen;
+
+    if (isOpen) {
+      chatbot.style.display = "flex";
+      btn.innerHTML = "✖";
+    } else {
+      chatbot.style.display = "none";
+      btn.innerHTML = "💬";
+    }
+  };
+});
+</script>
 <script src="script.js"></script>
 <script>
 window.onload = function () {
@@ -872,6 +896,25 @@ window.onload = function () {
 
 };
 </script>
+<!-- 💬 CHAT BUTTON -->
+<div id="chatToggleBtn" style="
+  position:fixed;
+  bottom:100px;
+  right:20px;
+  width:60px;
+  height:60px;
+  background:#10a37f;
+  color:white;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:24px;
+  cursor:pointer;
+  z-index:1000;
+">
+  💬
+</div>
 
 </body>
 </html>
