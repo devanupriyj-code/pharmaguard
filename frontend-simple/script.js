@@ -15,7 +15,7 @@ async function saveReportToFirebase(data) {
     const { addDoc, collection } = await import(
       "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"
     );
-    await addDoc(collection(db, "reports"), {
+    await addDoc(collection(window.db, "reports"), {
   values: data.extracted || {},
   medicines: medicines,
   interactions: data.ai?.interactions || [],
@@ -557,3 +557,27 @@ window.addEventListener("load", () => {
 // 🔐 AUTH SYSTEM (FINAL FIX)
 // ==============================
 
+// ==============================
+// 💬 CHAT TOGGLE (NEW FEATURE)
+// ==============================
+
+window.addEventListener("load", () => {
+  const btn = document.getElementById("chatToggleBtn");
+  const chatbot = document.getElementById("chatbot");
+
+  if (!btn || !chatbot) return;
+
+  let isOpen = false;
+
+  btn.onclick = () => {
+    isOpen = !isOpen;
+
+    if (isOpen) {
+      chatbot.style.display = "flex";
+      btn.innerHTML = "✖"; // close icon
+    } else {
+      chatbot.style.display = "none";
+      btn.innerHTML = "💬"; // chat icon
+    }
+  };
+});

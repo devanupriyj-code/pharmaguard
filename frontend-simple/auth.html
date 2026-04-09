@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login - PharmaGuard</title>
+</head>
+
+<body style="font-family:Arial;display:flex;justify-content:center;align-items:center;height:100vh;background:#f0fdfb;">
+
+<div style="background:white;padding:30px;border-radius:10px;width:300px;">
+  <h2>Login</h2>
+
+  <input id="email" placeholder="Email" style="width:100%;padding:10px;margin:10px 0;">
+  <input id="password" type="password" placeholder="Password" style="width:100%;padding:10px;margin:10px 0;">
+
+  <button onclick="signup()" style="width:100%;padding:10px;">Sign Up</button>
+  <button onclick="login()" style="width:100%;padding:10px;margin-top:10px;">Login</button>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { 
+  getAuth, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword 
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSy...",
+  authDomain: "pharmaguard-b77e1.firebaseapp.com",
+  projectId: "pharmaguard-b77e1"
+};
+
+const app = initializeApp(firebaseConfig);
+window.db = getFirestore(app);
+
+window.signup = async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  await createUserWithEmailAndPassword(auth, email, password);
+  alert("Signup successful");
+};
+
+window.login = async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+
+  await signInWithEmailAndPassword(auth, email, password);
+  alert("Login successful");
+
+  window.location.href = "index.html";
+};
+</script>
+
+</body>
+</html>

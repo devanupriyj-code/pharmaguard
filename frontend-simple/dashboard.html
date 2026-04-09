@@ -507,47 +507,56 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+window.db = db; 
 async function loadDashboard() {
 
+  if (!window.db) {
+    console.error("DB not initialized");
+    return;
+  }
 
-
-const q = query(
-  collection(db, "reports"),
-  orderBy("date", "desc")
-);
+  const q = query(
+    collection(window.db, "reports"),
+    orderBy("date", "desc")
+  );
 
   const snapshot = await getDocs(q);
+
   let reports = [];
   snapshot.forEach(doc => reports.push(doc.data()));
 
-if (!reports.length) {
-  console.log("No reports found");
-  return;
-}
+  console.log("Reports:", reports); // 🔥 DEBUG
+
+  if (!reports.length) {
+    console.log("No reports found");
+    return;
+  }
 
   const latest = reports[0];
+
   showFullHealthData(latest);
-showInteractions(latest);
-showDiet(latest);
-showPrecautions(latest);
+  showInteractions(latest);
+  showDiet(latest);
+  showPrecautions(latest);
   showValues(latest);
   showScore(latest);
+
   if (reports.length > 1) {
-  showCharts(reports);
-} else {
-  document.getElementById("glucoseChart").parentElement.innerHTML =
-    "<p style='text-align:center;'>Upload more reports to see trends</p>";
+    showCharts(reports);
+  } else {
+    document.getElementById("glucoseChart").parentElement.innerHTML =
+      "<p style='text-align:center;'>Upload more reports to see trends</p>";
 
-  document.getElementById("cholChart").parentElement.innerHTML =
-    "<p style='text-align:center;'>Upload more reports to see trends</p>";
+    document.getElementById("cholChart").parentElement.innerHTML =
+      "<p style='text-align:center;'>Upload more reports to see trends</p>";
 
-  document.getElementById("hbChart").parentElement.innerHTML =
-    "<p style='text-align:center;'>Upload more reports to see trends</p>";
-}
+    document.getElementById("hbChart").parentElement.innerHTML =
+      "<p style='text-align:center;'>Upload more reports to see trends</p>";
+  }
+
   showAlerts(latest);
   showAI(latest);
 }
-
 function demoData() {
   return [
     { date: "2026-04-09", values: { glucose: {value:118}, cholesterol: {value:195}, creatinine: {value:1.1}, hb: {value:13.8} } },
